@@ -11,8 +11,8 @@ Console.WriteLine($"{increases} increases");
 
 int largerWindows = 0;
 for (int i = 0; i < values.Length - 3; ++i) {
-    int first = values[i] + values[i + 1] + values[i + 2];
-    int second = values[i + 1] + values[i + 2] + values[i + 3];
+    int first = values[i..(i+3)].Sum();
+    int second = values[(i+1)..(i+4)].Sum();
     if (second > first)
         largerWindows++;
 }
