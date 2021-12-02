@@ -1,6 +1,7 @@
 ﻿string[] lines = File.ReadAllLines("input.txt");
 int position = 0;
 int depth = 0;
+int aim = 0;
 foreach (string line in lines) {
     string[] parts = line.Split(' ');
     string direction = parts[0];
@@ -8,12 +9,13 @@ foreach (string line in lines) {
     switch (direction) {
         case "forward":
             position += amount;
+            depth += amount * aim;
             break;
         case "down":
-            depth += amount;
+            aim += amount;
             break;
         case "up":
-            depth -= amount;
+            aim -= amount;
             break;
         default:
             throw new ArgumentOutOfRangeException("direction", direction);
