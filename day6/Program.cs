@@ -1,22 +1,22 @@
 ﻿List<int> lanternfishAges = File.ReadAllText("input.txt").Split(',')
     .Select(int.Parse).ToList();
 
-for (int day = 0; day < 80; day++)
+long[] fishCountByAge = new long[9];
+foreach (int age in lanternfishAges)
 {
-    List<int> newFish = new();
-    foreach (int age in lanternfishAges)
-    {
-        if (age == 0)
-        {
-            newFish.Add(6);
-            newFish.Add(8);
-        }
-        else
-        {
-            newFish.Add(age - 1);
-        }
-    }
-    lanternfishAges = newFish;
+    fishCountByAge[age]++;
 }
 
-Console.WriteLine(new { lanternfishCount = lanternfishAges.Count });
+for (int day = 0; day < 256; day++)
+{
+    long[] newFish = new long[9];
+    for (int age = 0; age < fishCountByAge.Length - 1; age++)
+    {
+        newFish[age] = fishCountByAge[age + 1];
+    }
+    newFish[8] = fishCountByAge[0];
+    newFish[6] += fishCountByAge[0];
+    fishCountByAge = newFish;
+}
+
+Console.WriteLine(new { lanternfishCount = fishCountByAge.Sum() });
