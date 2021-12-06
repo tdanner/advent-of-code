@@ -8,34 +8,15 @@ record Point(int x, int y)
 
 record Line(Point start, Point end)
 {
-    public bool IsGridAligned()
-    {
-        return start.x == end.x || start.y == end.y;
-    }
-
     public IEnumerable<Point> GridPoints()
     {
-        if (start.x == end.x)
+        int xDir = Sign(end.x - start.x);
+        int yDir = Sign(end.y - start.y);
+        int numPoints = Max(Abs(end.x - start.x), Abs(end.y - start.y)) + 1;
+        for (int pos = 0; pos < numPoints; ++pos)
         {
-            for (int y = Min(start.y, end.y); y <= Max(start.y, end.y); ++y)
-            {
-                yield return new Point(start.x, y);
-            }
-
-            yield break;
+            yield return new Point(start.x + pos*xDir, start.y + pos*yDir);
         }
-
-        if (start.y == end.y)
-        {
-            for (int x = Min(start.x, end.x); x <= Max(start.x, end.x); ++x)
-            {
-                yield return new Point(x, start.y);
-            }
-
-            yield break;
-        }
-
-        // if not grid-aligned, fall through
     }
 }
 
@@ -51,9 +32,6 @@ class Program
                                   new Point(int.Parse(m.Groups[3].Value), int.Parse(m.Groups[4].Value))))
             .ToArray();
         
-        int gridAlignedLines = ventLines.Count(line => line.IsGridAligned());
-        Console.WriteLine($"{gridAlignedLines} grid-aligned lines found");
-
         int[,] grid = new int[gridSize,gridSize];
 
         foreach (Line ventLine in ventLines)
