@@ -40,6 +40,7 @@ int GetScore(int[][] board, int numberDrawn)
 
 foreach (int numberDrawn in numbersDrawn)
 {
+    List<int[][]> boardsWon = new();
     foreach (int[][] board in boards)
     {
         for (int row = 0; row < 5; row++)
@@ -51,12 +52,20 @@ foreach (int numberDrawn in numbersDrawn)
                     board[row][column] = -1;
                     if (BoardWins(board))
                     {
-                        int winningScore = GetScore(board, numberDrawn);
-                        Console.WriteLine(new { winningScore });
-                        Environment.Exit(0);
+                        boardsWon.Add(board);
+                        if (boards.Count == 1)
+                        {
+                            int winningScore = GetScore(board, numberDrawn);
+                            Console.WriteLine(new { winningScore });
+                            Environment.Exit(0);
+                        }
                     }
                 }
             }
         }
+    }
+    foreach (var winningBoard in boardsWon)
+    {
+        boards.Remove(winningBoard);
     }
 }
