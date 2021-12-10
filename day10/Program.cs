@@ -1,27 +1,9 @@
 ﻿var lines = File.ReadAllLines("input.txt");
-Dictionary<char, char> closers = new()
-{
-    ['('] = ')',
-    ['['] = ']',
-    ['{'] = '}',
-    ['<'] = '>'
-};
+Dictionary<char, char> closers = new() { ['('] = ')', ['['] = ']', ['{'] = '}', ['<'] = '>' };
 
-Dictionary<char, int> errorValues = new()
-{
-    [')'] = 3,
-    [']'] = 57,
-    ['}'] = 1197,
-    ['>'] = 25137
-};
+Dictionary<char, int> errorValues = new() { [')'] = 3, [']'] = 57, ['}'] = 1197, ['>'] = 25137 };
 
-Dictionary<char, int> completionValues = new()
-{
-    [')'] = 1,
-    [']'] = 2,
-    ['}'] = 3,
-    ['>'] = 4
-};
+Dictionary<char, int> completionValues = new() { [')'] = 1, [']'] = 2, ['}'] = 3, ['>'] = 4 };
 
 // Part 1
 
@@ -30,6 +12,7 @@ foreach (var line in lines)
 {
     Stack<char> pending = new();
     foreach (var c in line)
+    {
         if (closers.TryGetValue(c, out var closer))
         {
             pending.Push(closer);
@@ -43,6 +26,7 @@ foreach (var line in lines)
                 break;
             }
         }
+    }
 }
 
 Console.WriteLine(new { score = errorScore });
@@ -55,6 +39,7 @@ foreach (var line in lines)
     Stack<char> pending = new();
     var corrupted = false;
     foreach (var c in line)
+    {
         if (closers.TryGetValue(c, out var closer))
         {
             pending.Push(closer);
@@ -69,6 +54,7 @@ foreach (var line in lines)
                 break;
             }
         }
+    }
 
     if (!corrupted)
     {
