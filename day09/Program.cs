@@ -1,4 +1,4 @@
-﻿var lines = File.ReadAllLines("input.txt");
+﻿string[] lines = File.ReadAllLines("input.txt");
 int width = lines[0].Length + 2;
 int length = lines.Length + 2;
 int[,] heights = new int[width, length];
@@ -46,10 +46,13 @@ Console.WriteLine(new { risk });
 
 // Part 2
 int[,] basinMap = new int[width, length];
+
 void MarkBasin(int basin, int x, int y)
 {
     if (basinMap[x, y] != 0 || heights[x, y] >= 9)
+    {
         return;
+    }
 
     basinMap[x, y] = basin;
 
@@ -63,7 +66,7 @@ for (int x = 1; x < width - 1; x++)
 {
     for (int y = 1; y < length - 1; y++)
     {
-        MarkBasin(y * length + x, x, y);
+        MarkBasin((y * length) + x, x, y);
     }
 }
 

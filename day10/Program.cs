@@ -1,4 +1,4 @@
-﻿var lines = File.ReadAllLines("input.txt");
+﻿string[] lines = File.ReadAllLines("input.txt");
 Dictionary<char, char> closers = new() { ['('] = ')', ['['] = ']', ['{'] = '}', ['<'] = '>' };
 
 Dictionary<char, int> errorValues = new() { [')'] = 3, [']'] = 57, ['}'] = 1197, ['>'] = 25137 };
@@ -7,19 +7,19 @@ Dictionary<char, int> completionValues = new() { [')'] = 1, [']'] = 2, ['}'] = 3
 
 // Part 1
 
-var errorScore = 0;
-foreach (var line in lines)
+int errorScore = 0;
+foreach (string line in lines)
 {
     Stack<char> pending = new();
-    foreach (var c in line)
+    foreach (char c in line)
     {
-        if (closers.TryGetValue(c, out var closer))
+        if (closers.TryGetValue(c, out char closer))
         {
             pending.Push(closer);
         }
         else
         {
-            var expected = pending.Pop();
+            char expected = pending.Pop();
             if (c != expected)
             {
                 errorScore += errorValues[c];
@@ -34,19 +34,19 @@ Console.WriteLine(new { score = errorScore });
 // Part 2
 
 List<long> completionScores = new();
-foreach (var line in lines)
+foreach (string line in lines)
 {
     Stack<char> pending = new();
-    var corrupted = false;
-    foreach (var c in line)
+    bool corrupted = false;
+    foreach (char c in line)
     {
-        if (closers.TryGetValue(c, out var closer))
+        if (closers.TryGetValue(c, out char closer))
         {
             pending.Push(closer);
         }
         else
         {
-            var expected = pending.Pop();
+            char expected = pending.Pop();
             if (c != expected)
             {
                 errorScore += errorValues[c];
@@ -59,7 +59,7 @@ foreach (var line in lines)
     if (!corrupted)
     {
         long completionScore = 0;
-        while (pending.TryPop(out var c))
+        while (pending.TryPop(out char c))
         {
             completionScore *= 5;
             completionScore += completionValues[c];
