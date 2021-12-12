@@ -52,8 +52,10 @@ void MaybeFlash(int x, int y)
     }
 }
 
-for (int step = 1; step <= 100; step++)
+for (int step = 1; step <= 1000; step++)
 {
+    int neededFlashes = flashes + grid.Length;
+
     // Increase all energy levels by 1
     for (int y = 0; y < height; ++y)
     {
@@ -82,6 +84,12 @@ for (int step = 1; step <= 100; step++)
                 grid[x, y] = 0;
             }
         }
+    }
+
+    if (flashes == neededFlashes)
+    {
+        Console.WriteLine($"All flashed on step {step}");
+        return;
     }
 
     // Console.WriteLine($"After step {step}:");
