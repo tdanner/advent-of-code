@@ -18,7 +18,8 @@ foreach (var point in points)
     grid[point.Item1, point.Item2] = true;
 }
 
-foreach (var fold in folds.Take(1))
+bool first = true;
+foreach (var fold in folds)
 {
     if (fold.Item1 == 'x')
     {
@@ -29,15 +30,20 @@ foreach (var fold in folds.Take(1))
         grid = FoldUp(grid, fold.Item2);
     }
 
-    //PrintGrid(grid);
-    int dots = 0;
-    foreach (var dot in grid)
+    if (first)
     {
-        if (dot) dots++;
-    }
+        first = false;
+        int dotsAfterFirstFold = 0;
+        foreach (var dot in grid)
+        {
+            if (dot) dotsAfterFirstFold++;
+        }
 
-    Console.WriteLine(new { dots });
+        Console.WriteLine(new { dotsAfterFirstFold });
+    }
 }
+
+PrintGrid(grid);
 
 void PrintGrid(bool[,] grid)
 {
