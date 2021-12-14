@@ -11,10 +11,7 @@ for (int pos = 0; pos < template.Length - 1; pos++)
 }
 
 Counter<char> charCounts = new();
-foreach (char c in template)
-{
-    charCounts[c]++;
-}
+template.ForEach(c => charCounts[c]++);
 
 for (int step = 1; step <= 40; step++)
 {
