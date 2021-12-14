@@ -1,24 +1,40 @@
-﻿using System.Text;
-
-string[] lines = File.ReadAllLines("input.txt");
+﻿string[] lines = File.ReadAllLines("example.txt");
 string template = lines[0];
-Dictionary<string, char> rules = lines[2..].ToDictionary(line => line[0..2], line => line[6]);
+Dictionary<(char, char), char> rules = lines[2..].ToDictionary(line => (line[0], line[1]), line => line[6]);
 
-for (int step = 1; step <= 10; step++)
+Counter<(char, char)> pairCounts = new();
+for (int pos = 0; pos < template.Length - 1; pos++)
 {
-    StringBuilder polymer = new();
-    for (int pos = 0; pos < template.Length - 1; pos++)
-    {
-        polymer.Append(template[pos]);
-        polymer.Append(rules[template[pos..(pos + 2)]]);
-    }
-    polymer.Append(template[^1]);
-    template = polymer.ToString();
-    Console.WriteLine($"After step {step} polymer length is {polymer.Length}");
-    // Console.WriteLine(template);
+    pairCounts[(template[pos], template[pos + 1])] = 1;
 }
 
-var histogram = template.GroupBy(c => c).OrderBy(g => g.Count()).ToList();
-int mostFrequent = histogram[^1].Count();
-int leastFrequent = histogram[0].Count();
-Console.WriteLine(new { answer = mostFrequent - leastFrequent });
+for (int step = 1; step <= 40; step++)
+{
+    Counter<(char, char)> next = new();
+    foreach (var pairCount in pairCounts)
+    {
+        char toInsert = rules[pairCount.Key];
+        next[(pairCount.Key.Item1, toInsert)] += pairCount.Value;
+        next[(toInsert, pairCount.Key.Item2)] += pairCount.Value;
+    }
+
+    pairCounts = next;
+}
+
+Counter<char> charCounts = new();
+foreach (var pair in pairCounts)
+{
+    charCounts[pair.Key.Item1] += pair.Value;
+    charCounts[pair.Key.Item2] += pair.Value;
+}
+// Now all characters have been double-counted except the first and last ones of the template
+charCounts[template[0]]++;
+charCounts[template[^1]]++;
+foreach (char c in charCounts.Keys)
+{
+    charCounts[c] /= 2;
+}
+
+long mostFrequent = charCounts.Values.Max();
+long leastFrequent = charCounts.Values.Min();
+Console.WriteLine(new { mostFrequent, leastFrequent, answer = mostFrequent - leastFrequent });
