@@ -1,4 +1,6 @@
-﻿string[] lines = File.ReadAllLines("input.txt");
+﻿using TimDanner.Utils;
+
+string[] lines = File.ReadAllLines("input.txt");
 string template = lines[0];
 Dictionary<(char, char), char> rules = lines[2..].ToDictionary(line => (line[0], line[1]), line => line[6]);
 

@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 
+namespace TimDanner.Utils;
+
 public class Bimap<T1, T2> : IDictionary<T1, T2>
     where T1 : notnull
     where T2 : notnull

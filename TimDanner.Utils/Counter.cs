@@ -1,6 +1,8 @@
 using System.Collections;
 
-class Counter<T> : IEnumerable<KeyValuePair<T, long>>
+namespace TimDanner.Utils;
+
+public class Counter<T> : IEnumerable<KeyValuePair<T, long>>
     where T : notnull
 {
     private readonly Dictionary<T, long> counts = new();

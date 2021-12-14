@@ -1,4 +1,6 @@
-﻿class Observation
+﻿using TimDanner.Utils;
+
+class Observation
 {
     string[] patterns;
     public string[] outputs;
