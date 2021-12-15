@@ -11,4 +11,13 @@
     <ProjectReference Include="../../TimDanner.Utils/TimDanner.Utils.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="example.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="input.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
