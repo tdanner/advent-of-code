@@ -6,7 +6,9 @@
         // BitReader reader = new("38006F45291200");
         // BitReader reader = new("A0016C880162017C3686B18A3D4780");
         BitReader reader = new(File.ReadAllText("input.txt"));
-        Console.WriteLine(new { sum = Packet.ReadPacket(reader).SumOfVersions() });
+        var packet = Packet.ReadPacket(reader);
+        // var packet = Packet.ReadPacket(new BitReader("9C005AC2F8F0"));
+        Console.WriteLine(new { sum = packet.SumOfVersions(), value = packet.Evaluate() });
     }
 }
 
@@ -37,24 +39,31 @@ class Packet
     {
         return version + _subpackets.Sum(p => p.SumOfVersions());
     }
+
+    public virtual long Evaluate()
+    {
+        return 0;
+    }
 }
 
 class LiteralValuePacket : Packet
 {
-    public int value;
+    public long value;
 
     public LiteralValuePacket(int version, int type, BitReader reader)
         : base(version, type)
     {
         while (true)
         {
-            int bits = reader.ReadBits(5);
+            long bits = reader.ReadBits(5);
             value <<= 4;
             value |= bits & 0b1111;
             if ((bits & 0b10000) == 0)
                 break;
         }
     }
+
+    public override long Evaluate() => value;
 }
 
 class OperatorPacket : Packet
@@ -77,6 +86,30 @@ class OperatorPacket : Packet
             int numSubpackets = reader.ReadBits(11);
             _subpackets.AddRange(Enumerable.Range(0, numSubpackets)
                                            .Select(_ => Packet.ReadPacket(reader)));
+        }
+    }
+
+    public override long Evaluate()
+    {
+        List<long> subvalues = _subpackets.Select(p => p.Evaluate()).ToList();
+        switch (type)
+        {
+            case 0:
+                return subvalues.Sum();
+            case 1:
+                return subvalues.Aggregate(1L, (a, b) => a * b);
+            case 2:
+                return subvalues.Min();
+            case 3:
+                return subvalues.Max();
+            case 5:
+                return subvalues[0] > subvalues[1] ? 1 : 0;
+            case 6:
+                return subvalues[0] < subvalues[1] ? 1 : 0;
+            case 7:
+                return subvalues[0] == subvalues[1] ? 1 : 0;
+            default:
+                throw new InvalidOperationException($"Unknown operation {type}");
         }
     }
 }
