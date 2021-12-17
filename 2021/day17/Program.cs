@@ -11,60 +11,26 @@ if (!match.Success) throw new InvalidOperationException("Couldn't parse input");
 Rect target = new(new(int.Parse(match.Groups[1].Value), int.Parse(match.Groups[4].Value)),
                   new(int.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value)));
 
-int maxY = int.MinValue;
-Point velocity = new(1, 1);
-int attempts = 1000;
-int velocityYLimit = int.MaxValue;
-while (--attempts > 0 && velocity.Y < velocityYLimit)
-{
-    Outcome outcome = PlotTrajectory(velocity, out int peak, out var path);
+var vxs = FindValidXVelocities();
+var vys = FindValidYVelocities();
+Console.WriteLine($"X({vxs.Count}): {string.Join(",", vxs)}");
+Console.WriteLine($"Y({vys.Count}): {string.Join(",", vys)}");
 
-    Console.WriteLine($"{velocity} {outcome}");
-    switch (outcome)
-    {
-        case Outcome.Hit:
-            if (peak > maxY) Console.WriteLine($"{velocity} {peak}");
-            maxY = Max(maxY, peak);
-            velocity = new(velocity.X, velocity.Y + 1);
-            break;
-        case Outcome.TooFast:
-            // PrintPath(path, outcome);
-            velocityYLimit = velocity.Y * 3;
-            velocity = new(velocity.X, velocity.Y + 1);
-            Console.WriteLine(new { maxY });
-            break;
-        case Outcome.TooFar:
-            velocity = new(velocity.X - 1, velocity.Y);
-            break;
-        case Outcome.TooShort:
-            velocity = new(velocity.X + 1, velocity.Y);
-            break;
-    }
-}
-
-void PrintPath(List<Point> path, Outcome outcome)
+List<Point> valids = new();
+foreach (var vx in vxs)
 {
-    Rect bounding = new(new(0, path.TakeLast(2).Append(target.TopLeft).Select(p => p.Y).Max()),
-    new(path.TakeLast(2).Append(target.BottomRight).Select(p => p.X).Max(),
-        path.TakeLast(2).Append(target.BottomRight).Select(p => p.Y).Min()));
-    Console.WriteLine();
-    Console.WriteLine(outcome);
-    for (int y = bounding.TopLeft.Y; y >= bounding.BottomRight.Y; y--)
+    foreach (var vy in vys)
     {
-        for (int x = bounding.TopLeft.X; x <= bounding.BottomRight.X; x++)
+        Point v = new(vx, vy);
+        if (PlotTrajectory(v, out _, out _) == Outcome.Hit)
         {
-            if (x == 0 && y == 0)
-                Console.Write("S");
-            else if (path.Contains(new(x, y)))
-                Console.Write('#');
-            else if (target.Contains(new(x, y)))
-                Console.Write('T');
-            else
-                Console.Write('.');
+            valids.Add(v);
         }
-        Console.WriteLine();
     }
 }
+
+Console.WriteLine(string.Join("\t", valids));
+Console.WriteLine($"{valids.Count} velocities found");
 
 Outcome PlotTrajectory(Point velocity, out int maxY, out List<Point> path)
 {
@@ -89,8 +55,54 @@ Outcome PlotTrajectory(Point velocity, out int maxY, out List<Point> path)
     }
 }
 
+List<int> FindValidXVelocities()
+{
+    List<int> valids = new();
+    for (int vxStart = 1; vxStart <= target.BottomRight.X; vxStart++)
+    {
+        int px = 0;
+        int vx = vxStart;
+        while (px <= target.BottomRight.X)
+        {
+            px += vx;
+            vx = Sign(vx) * (Abs(vx) - 1);
+            if (px >= target.TopLeft.X && px <= target.BottomRight.X)
+            {
+                valids.Add(vxStart);
+                break;
+            }
+            if (vx == 0) break;
+        }
+    }
+    return valids;
+}
+
+List<int> FindValidYVelocities()
+{
+    List<int> valids = new();
+    for (int vyStart = target.BottomRight.Y; vyStart < 10000; vyStart++)
+    {
+        int py = 0;
+        int vy = vyStart;
+        while (py >= target.BottomRight.Y)
+        {
+            py += vy;
+            vy--;
+            if (py <= target.TopLeft.Y && py >= target.BottomRight.Y)
+            {
+                valids.Add(vyStart);
+                break;
+            }
+        }
+    }
+    return valids;
+}
+
 [DebuggerDisplay("{X},{Y}")]
-record Point(int X, int Y);
+record Point(int X, int Y)
+{
+    public override string ToString() => $"{X},{Y}";
+}
 
 [DebuggerDisplay("{TopLeft}:{BottomRight}")]
 record Rect(Point TopLeft, Point BottomRight)
