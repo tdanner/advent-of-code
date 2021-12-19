@@ -11,11 +11,33 @@ static class Program
             sum = new Pair(sum, num);
             ((Pair)sum).Left.Parent = (Pair)sum;
             ((Pair)sum).Right.Parent = (Pair)sum;
-            Console.WriteLine(sum);
+            // Console.WriteLine(sum);
             Reduce(sum);
         }
 
         Console.WriteLine(sum.Magnitude());
+
+        string[] lines = File.ReadAllLines("input.txt");
+        long largest = 0;
+        for (int i = 0; i < nums.Length; ++i)
+        {
+            for (int j = 0; j < nums.Length; ++j)
+            {
+                if (i == j) continue;
+                long mag = Add(Parse(lines[i]), Parse(lines[j])).Magnitude();
+                largest = Math.Max(largest, mag);
+            }
+        }
+        Console.WriteLine(largest);
+    }
+
+    private static FishNum Add(FishNum a, FishNum b)
+    {
+        FishNum sum = new Pair(a, b);
+        ((Pair)sum).Left.Parent = (Pair)sum;
+        ((Pair)sum).Right.Parent = (Pair)sum;
+        Reduce(sum);
+        return sum;
     }
 
     private static void TestExplode(string before, string after)
@@ -57,7 +79,7 @@ static class Program
         while (MaybeExplode(num, num, 0) ||
                MaybeSplit(num, num))
         {
-            Console.WriteLine(num);
+            // Console.WriteLine(num);
         }
     }
 
