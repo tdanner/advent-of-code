@@ -12,9 +12,9 @@ Func<int, int, char> image = (y, x) =>
 {
     if (memo.TryGetValue((y, x, 0), out char c)) return c;
 
-    if (y < 0 || y >= lines.Length - 2)
+    if (y < 0 || y >= height)
         return '.';
-    if (x < 0 || x >= lines[2].Length)
+    if (x < 0 || x >= width)
         return '.';
 
     char c2 = lines[y + 2][x];
