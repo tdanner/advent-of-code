@@ -15,7 +15,6 @@ foreach (string line in File.ReadAllLines("input.txt"))
              int.Parse(match.Groups[5].Value) + 1,
              int.Parse(match.Groups[6].Value),
              int.Parse(match.Groups[7].Value) + 1)));
-    Console.WriteLine(steps[^1]);
 }
 
 SortedSet<int> xValues = new();
@@ -31,17 +30,10 @@ foreach (var step in steps)
     zValues.Add(step.cube.Zmax);
 }
 
-xValues.Add(-50);
-xValues.Add(51);
-yValues.Add(-50);
-yValues.Add(51);
-zValues.Add(-50);
-zValues.Add(51);
-
 Console.WriteLine($"Distinct values: x={xValues.Count}, y={yValues.Count}, z={xValues.Count}");
 Console.WriteLine($"stepSpace size: {xValues.Count * yValues.Count * xValues.Count:N0}");
 
-Bimap<int, int> xGrid = new(), yGrid = new(), zGrid = new();
+Bimap<long, long> xGrid = new(), yGrid = new(), zGrid = new();
 xValues.ForEach((x, i) => xGrid[x] = i);
 yValues.ForEach((y, i) => yGrid[y] = i);
 zValues.ForEach((z, i) => zGrid[z] = i);
@@ -50,11 +42,11 @@ bool[,,] stepSpace = new bool[zValues.Count, yValues.Count, xValues.Count];
 
 foreach (var step in steps)
 {
-    for (int z = zGrid[step.cube.Zmin]; z < zGrid[step.cube.Zmax]; z++)
+    for (long z = zGrid[step.cube.Zmin]; z < zGrid[step.cube.Zmax]; z++)
     {
-        for (int y = yGrid[step.cube.Ymin]; y < yGrid[step.cube.Ymax]; y++)
+        for (long y = yGrid[step.cube.Ymin]; y < yGrid[step.cube.Ymax]; y++)
         {
-            for (int x = xGrid[step.cube.Xmin]; x < xGrid[step.cube.Xmax]; x++)
+            for (long x = xGrid[step.cube.Xmin]; x < xGrid[step.cube.Xmax]; x++)
             {
                 stepSpace[z, y, x] = step.on;
             }
@@ -63,11 +55,11 @@ foreach (var step in steps)
 }
 
 long cubesOn = 0;
-for (int z = zGrid[-50]; z < zGrid[51]; z++)
+for (int z = 0; z < zValues.Count - 1; z++)
 {
-    for (int y = yGrid[-50]; y < yGrid[51]; y++)
+    for (int y = 0; y < yValues.Count - 1; y++)
     {
-        for (int x = xGrid[-50]; x < xGrid[51]; x++)
+        for (int x = 0; x < xValues.Count - 1; x++)
         {
             if (stepSpace[z, y, x])
             {
