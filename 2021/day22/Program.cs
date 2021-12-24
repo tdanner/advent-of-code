@@ -1,8 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Text.RegularExpressions;
+using TimDanner.Utils;
 
 List<(bool on, Cube cube)> steps = new();
-foreach (string line in File.ReadAllLines("simple.txt"))
+foreach (string line in File.ReadAllLines("input.txt"))
 {
     var match = Regex.Match(line, @"^(on|off) x=(-?\d+)..(-?\d+),y=(-?\d+)..(-?\d+),z=(-?\d+)..(-?\d+)$");
     Debug.Assert(match.Success);
@@ -17,97 +18,68 @@ foreach (string line in File.ReadAllLines("simple.txt"))
     Console.WriteLine(steps[^1]);
 }
 
-
-
-List<Cube> onCubes = new();
-for (int stepNum = 0; stepNum < steps.Count; stepNum++)
+SortedSet<int> xValues = new();
+SortedSet<int> yValues = new();
+SortedSet<int> zValues = new();
+foreach (var step in steps)
 {
-    var step = steps[stepNum];
-
-    List<Cube> onCubes2 = new();
-    foreach (var onCube in onCubes)
-    {
-        if (Intersect(step.cube, onCube, out Cube? intersection, out List<Cube> leftRemainder, out List<Cube> rightRemainder))
-        {
-            onCubes2.AddRange(rightRemainder);
-            if (step.on)
-            {
-                onCubes2.Add(intersection!);
-                onCubes2.AddRange(leftRemainder);
-            }
-        }
-        else
-        {
-            onCubes2.Add(step.cube);
-        }
-    }
-
-    if (stepNum == 0)
-    {
-        onCubes2.Add(step.cube);
-    }
-
-    onCubes = onCubes2;
-
-    Console.WriteLine();
-    Console.WriteLine($"After step {stepNum + 1} volume = {onCubes.Sum(c => c.Volume())}");
-    foreach (var point in onCubes.SelectMany(cube => cube.Points()).OrderBy(p => p))
-    {
-        Console.WriteLine(point);
-    }
+    xValues.Add(step.cube.Xmin);
+    xValues.Add(step.cube.Xmax);
+    yValues.Add(step.cube.Ymin);
+    yValues.Add(step.cube.Ymax);
+    zValues.Add(step.cube.Zmin);
+    zValues.Add(step.cube.Zmax);
 }
 
-Console.WriteLine(onCubes.Sum(cube => cube.Volume()));
+xValues.Add(-50);
+xValues.Add(51);
+yValues.Add(-50);
+yValues.Add(51);
+zValues.Add(-50);
+zValues.Add(51);
 
-bool Intersect(Cube left, Cube right, out Cube? intersection, out List<Cube> leftRemainder, out List<Cube> rightRemainder)
+Console.WriteLine($"Distinct values: x={xValues.Count}, y={yValues.Count}, z={xValues.Count}");
+Console.WriteLine($"stepSpace size: {xValues.Count * yValues.Count * xValues.Count:N0}");
+
+Bimap<int, int> xGrid = new(), yGrid = new(), zGrid = new();
+xValues.ForEach((x, i) => xGrid[x] = i);
+yValues.ForEach((y, i) => yGrid[y] = i);
+zValues.ForEach((z, i) => zGrid[z] = i);
+
+bool[,,] stepSpace = new bool[zValues.Count, yValues.Count, xValues.Count];
+
+foreach (var step in steps)
 {
-    // returns true if left and right overlap
-    // intersection gets the overlap
-    // leftRemainder gets a set of cubes corresponding to all parts of left minus right
-    // rightRemainder gets a set of cubes corresponding to all parts of right minus left
-    // no attempt to minimize the number of output cubes
-
-    intersection = null;
-    leftRemainder = new();
-    rightRemainder = new();
-
-    if (left.Xmin >= right.Xmax || left.Xmax <= right.Xmin ||
-        left.Ymin >= right.Ymax || left.Ymax <= right.Ymin ||
-        left.Zmin >= right.Zmax || left.Zmax <= right.Zmin)
-        return false;
-
-    // some overlap - slice the space into 27 subcubes!
-    List<int> x = new[] { left.Xmin, right.Xmin, left.Xmax, right.Xmax }.Distinct().OrderBy(x => x).ToList();
-    List<int> y = new[] { left.Ymin, right.Ymin, left.Ymax, right.Ymax }.Distinct().OrderBy(x => x).ToList();
-    List<int> z = new[] { left.Zmin, right.Zmin, left.Zmax, right.Zmax }.Distinct().OrderBy(x => x).ToList();
-    for (int iz = 0; iz < z.Count - 1; iz++)
+    for (int z = zGrid[step.cube.Zmin]; z < zGrid[step.cube.Zmax]; z++)
     {
-        for (int iy = 0; iy < y.Count - 1; iy++)
+        for (int y = yGrid[step.cube.Ymin]; y < yGrid[step.cube.Ymax]; y++)
         {
-            for (int ix = 0; ix < x.Count - 1; ix++)
+            for (int x = xGrid[step.cube.Xmin]; x < xGrid[step.cube.Xmax]; x++)
             {
-                Cube sub = new(x[ix], x[ix + 1], y[iy], y[iy + 1], z[iz], z[iz + 1]);
-                if (left.Contains(sub) && right.Contains(sub))
-                {
-                    Debug.Assert(intersection == null);
-                    intersection = sub;
-                }
-                else if (left.Contains(sub))
-                {
-                    leftRemainder.Add(sub);
-                }
-                else if (right.Contains(sub))
-                {
-                    rightRemainder.Add(sub);
-                }
-                // else - inside union bounding box, but not actually left or right
+                stepSpace[z, y, x] = step.on;
             }
         }
     }
-
-    Debug.Assert(intersection != null);
-    return true;
 }
+
+long cubesOn = 0;
+for (int z = zGrid[-50]; z < zGrid[51]; z++)
+{
+    for (int y = yGrid[-50]; y < yGrid[51]; y++)
+    {
+        for (int x = xGrid[-50]; x < xGrid[51]; x++)
+        {
+            if (stepSpace[z, y, x])
+            {
+                cubesOn += (zGrid.GetByValue(z + 1) - zGrid.GetByValue(z)) *
+                           (yGrid.GetByValue(y + 1) - yGrid.GetByValue(y)) *
+                           (xGrid.GetByValue(x + 1) - xGrid.GetByValue(x));
+            }
+        }
+    }
+}
+
+Console.WriteLine(cubesOn);
 
 record Cube(int Xmin, int Xmax, int Ymin, int Ymax, int Zmin, int Zmax)
 {

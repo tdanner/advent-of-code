@@ -10,6 +10,16 @@ public static class EnumerableExtensions
         }
     }
 
+    public static void ForEach<T>(this IEnumerable<T> items, Action<T, int> action)
+    {
+        int i = 0;
+        foreach (var item in items)
+        {
+            action(item, i);
+            ++i;
+        }
+    }
+
     public static T? MinBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> selector)
         where TKey : IComparable
     {
