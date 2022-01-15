@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"strings"
 )
@@ -17,20 +18,44 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ids := make([]int, 0)
-	max := 0
+	minRow, maxRow := 99999, 0
+	seats := make(map[int][]int)
 	for _, v := range strings.Split(string(data), "\n") {
-		id := 0
-		for _, c := range v {
-			id <<= 1
-			if c == 'B' || c == 'R' {
-				id |= 1
+		if v == "" {
+			continue
+		}
+		row, col := 0, 0
+		for _, c := range v[:7] {
+			row <<= 1
+			if c == 'B' {
+				row |= 1
 			}
 		}
-		ids = append(ids, id)
-		if id > max {
-			max = id
+		for _, c := range v[7:] {
+			col <<= 1
+			if c == 'R' {
+				col |= 1
+			}
+		}
+		seats[row] = append(seats[row], col)
+		minRow = int(math.Min(float64(row), float64(minRow)))
+		maxRow = int(math.Max(float64(row), float64(maxRow)))
+	}
+	for row := minRow + 1; row < maxRow; row++ {
+		for col := 0; col < 8; col++ {
+			if !contains(seats[row], col) {
+				fmt.Println(map[string]int{"row": row, "col": col, "id": row*8 + col})
+			}
 		}
 	}
-	fmt.Println(max)
+	fmt.Println(seats)
+}
+
+func contains(arr []int, seeking int) bool {
+	for _, v := range arr {
+		if v == seeking {
+			return true
+		}
+	}
+	return false
 }
