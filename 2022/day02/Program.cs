@@ -3,10 +3,10 @@
     private static void Main(string[] args)
     {
         var lines = File.ReadAllLines("input.txt");
-        var total = lines.Select(ParseLine).Select(game => Value(game.Item2) + Score(game)).Sum();
+        var total = lines.Select(ParseLine).Select(game => (int)DeterminePlay(game.Item1, game.Item2) + (int)game.Item2).Sum();
         Console.WriteLine(total);
 
-        RPS Parse(char c) => c switch
+        RPS ParseRPS(char c) => c switch
         {
             'A' or 'X' => RPS.Rock,
             'B' or 'Y' => RPS.Paper,
@@ -14,25 +14,29 @@
             _ => throw new Exception($"Unknown play {c}")
         };
 
-        Tuple<RPS, RPS> ParseLine(string line) => Tuple.Create(Parse(line[0]), Parse(line[2]));
-
-        int Value(RPS play) => play switch
+        Outcome ParseOutcome(char c) => c switch
         {
-            RPS.Rock => 1,
-            RPS.Paper => 2,
-            RPS.Scissors => 3,
-            _ => throw new Exception($"Unknown RPS {play}")
+            'X' => Outcome.Lose,
+            'Y' => Outcome.Draw,
+            'Z' => Outcome.Win,
+            _ => throw new Exception($"Unknown output {c}")
         };
 
-        int Score(Tuple<RPS, RPS> game) => game switch
+        RPS DeterminePlay(RPS opponent, Outcome desired) => (opponent, desired) switch
         {
-            (RPS x, RPS y) when x == y => 3,
-            (RPS.Rock, RPS.Paper) => 6,
-            (RPS.Paper, RPS.Scissors) => 6,
-            (RPS.Scissors, RPS.Rock) => 6,
-            _ => 0
+            (_, Outcome.Draw) => opponent,
+            (RPS.Rock, Outcome.Win) => RPS.Paper,
+            (RPS.Paper, Outcome.Win) => RPS.Scissors,
+            (RPS.Scissors, Outcome.Win) => RPS.Rock,
+            (RPS.Rock, Outcome.Lose) => RPS.Scissors,
+            (RPS.Paper, Outcome.Lose) => RPS.Rock,
+            (RPS.Scissors, Outcome.Lose) => RPS.Paper,
+            _ => throw new Exception($"Unexpected ({opponent}, {desired})")
         };
+
+        Tuple<RPS, Outcome> ParseLine(string line) => Tuple.Create(ParseRPS(line[0]), ParseOutcome(line[2]));
     }
 }
 
-enum RPS { Rock, Paper, Scissors }
+enum RPS { Rock = 1, Paper = 2, Scissors = 3 }
+enum Outcome { Win = 6, Lose = 0, Draw = 3 }
