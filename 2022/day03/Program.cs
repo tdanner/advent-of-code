@@ -1,21 +1,30 @@
-﻿var lines = File.ReadAllLines("input.txt");
-int total = lines.Select(FindCommonChar).Select(GetPriority).Sum();
-Console.WriteLine(total);
+﻿using System.Collections;
 
-char FindCommonChar(string line)
+var lines = File.ReadAllLines("input.txt");
+int total = 0;
+for (int g = 0; g < lines.Length; g += 3)
 {
-    int mid = line.Length / 2;
-    for (int i = 0; i < mid; i++)
+    var badges = Contents(lines[g]).And(Contents(lines[g + 1])).And(Contents(lines[g + 2]));
+    for (char badge = 'A'; badge <= 'z'; badge++)
     {
-        for (int j = mid; j < line.Length; j++)
+        if (badges[badge])
         {
-            if (line[i] == line[j])
-            {
-                return line[i];
-            }
+            total += GetPriority(badge);
+            break;
         }
     }
-    throw new Exception($"No common char found in {line}");
+}
+
+Console.WriteLine(total);
+
+BitArray Contents(string line)
+{
+    var result = new BitArray('z' + 1);
+    for (int i = 0; i < line.Length; ++i)
+    {
+        result[line[i]] = true;
+    }
+    return result;
 }
 
 int GetPriority(char c) => c switch
