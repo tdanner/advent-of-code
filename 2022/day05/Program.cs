@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 
 var lines = File.ReadAllLines("input.txt");
-
+Stack<char> claw9001 = new Stack<char>();
 int numStacks = (lines[0].Length + 1) / 4;
 var stacks = new List<Stack<char>>();
 for (int i = 0; i < numStacks; i++)
@@ -32,16 +32,20 @@ foreach (var move in lines[(indexLine + 2)..])
     int source = int.Parse(m.Groups[2].ValueSpan);
     int target = int.Parse(m.Groups[3].ValueSpan);
     Console.WriteLine($"move {numToMove} from {source} to {target}");
-    CrateMover9000(numToMove, source, target);
+    CrateMover9001(numToMove, source, target);
 }
 
-var part1 = new string(stacks.Select(s => s.Peek()).ToArray());
-Console.WriteLine($"Part 1: {part1}");
+var part2 = new string(stacks.Select(s => s.Peek()).ToArray());
+Console.WriteLine($"Part 2: {part2}");
 
-void CrateMover9000(int numToMove, int source, int target)
+void CrateMover9001(int numToMove, int source, int target)
 {
     for (int i = 0; i < numToMove; i++)
     {
-        stacks[target - 1].Push(stacks[source - 1].Pop());
+        claw9001.Push(stacks[source - 1].Pop());
+    }
+    for (int i = 0; i < numToMove; i++)
+    {
+        stacks[target - 1].Push(claw9001.Pop());
     }
 }
