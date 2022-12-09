@@ -3,26 +3,29 @@
 var lines = File.ReadAllLines("input.txt");
 var visited = new HashSet<pt>();
 
-var start = new pt(0, 4);
-var head = start;
-var tail = head;
+var start = new pt(11, 15);
+var knots = Enumerable.Repeat(start, 10).ToArray();
 
-const int w = 6, h = 5;
+const int w = 26, h = 20;
 
-Console.WriteLine($"== Initial State ==");
-dump();
+//Console.WriteLine($"== Initial State ==");
+//dump();
 
 foreach (var line in lines)
 {
     char dir = line[0];
     int dist = int.Parse(line[2..]);
-    Console.WriteLine($"== {dir} {dist} ==");
+    //Console.WriteLine($"== {dir} {dist} ==");
     for (int _ = 0; _ < dist; _++)
     {
-        head = head.move(dir);
-        tail = tail.follow(head);
-        visited.Add(tail);
-        dump();
+        knots[0] = knots[0].move(dir);
+        for (int i = 1; i < knots.Length; i++)
+        {
+            knots[i] = knots[i].follow(knots[i - 1]);
+        }
+
+        visited.Add(knots[^1]);
+        //dump();
     }
 }
 
@@ -36,23 +39,28 @@ void dump()
         for (int x = 0; x < w; x++)
         {
             var here = new pt(x, y);
-            char c;
-            if (here == head)
-                c = 'H';
-            else if (here == tail)
-                c = 'T';
-            else if (here == start)
+            char c = '.';
+            if (here == start)
+            {
                 c = 's';
-            else
-                c = '.';
+            }
+            for (int i = knots.Length - 1; i >= 1; i--)
+            {
+                if (here == knots[i])
+                {
+                    c = (char)('0' + i);
+                }
+            }
+            if (here == knots[0])
+            {
+                c = 'H';
+            }
             buffer.Append(c);
-
         }
         buffer.AppendLine();
     }
     Console.WriteLine(buffer.ToString());
 }
-
 
 record class pt(int x, int y)
 {
