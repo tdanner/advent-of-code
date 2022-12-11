@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 var text = File.ReadAllText("input.txt");
 var parser = new Regex(@"
@@ -20,6 +19,8 @@ var monkeys = parser.Matches(text).Select(m => new Monkey
     monkeyIfFalse = int.Parse(m.Groups["false"].Value),
 }).ToList();
 
+int ring = monkeys.Select(m => m.divisibilityTest).Aggregate(1, (m, r) => r * m);
+
 Func<long, long> ParseOperation(string oper, string operandStr)
 {
     Func<long, long> operand = operandStr == "old"
@@ -33,9 +34,7 @@ Func<long, long> ParseOperation(string oper, string operandStr)
     };
 }
 
-Console.WriteLine(JsonSerializer.Serialize(monkeys, new JsonSerializerOptions { WriteIndented = true }));
-
-for (int round = 0; round < 20; round++)
+for (int round = 1; round <= 10000; round++)
 {
     foreach (var m in monkeys)
     {
@@ -43,26 +42,24 @@ for (int round = 0; round < 20; round++)
         {
             m.inspections++;
             long item = m.operation(old);
-            item /= 3;
+            item %= ring;
             int target = (item % m.divisibilityTest == 0) ? m.monkeyIfTrue : m.monkeyIfFalse;
             monkeys[target].items.Add(item);
         }
         m.items.Clear();
     }
 
-    Console.WriteLine($"After round {round + 1}");
-    for (int m = 0; m < monkeys.Count; m++)
+    if (round == 1 || round == 20 || (round % 1000 == 0))
     {
-        Console.WriteLine($"Monkey {m}: {string.Join(", ", monkeys[m].items.Select(i => i.ToString()))}");
+        Console.WriteLine($"\n == After round {round + 1} ==");
+        for (int m = 0; m < monkeys.Count; m++)
+        {
+            Console.WriteLine($"Monkey {m} inspected items {monkeys[m].inspections} times.");
+        }
     }
 }
 
-for (int m = 0; m < monkeys.Count; m++)
-{
-    Console.WriteLine($"Monkey {m} inspected items {monkeys[m].inspections} times.");
-}
-
-int part1 = monkeys.OrderByDescending(m => m.inspections).Take(2).Aggregate(1, (a, m) => a * m.inspections);
+long part1 = monkeys.OrderByDescending(m => m.inspections).Take(2).Aggregate(1L, (a, m) => a * m.inspections);
 Console.WriteLine($"Part 1: {part1}");
 
 public class Monkey
