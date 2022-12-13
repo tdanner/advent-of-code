@@ -25,6 +25,20 @@ for (int pair = 1; pair <= (lines.Length + 1) / 3; pair++)
 
 Console.WriteLine($"Part 1: {part1}");
 
+/// Part 2
+var packets = lines.Where(s => !string.IsNullOrWhiteSpace(s))
+    .Select(Parse).ToList();
+object divider1 = Parse("[[2]]");
+object divider2 = Parse("[[6]]");
+packets.Add(divider1);
+packets.Add(divider2);
+packets.Sort(Compare);
+int div1pos = 1 + packets.IndexOf(divider1);
+int div2pos = 1 + packets.IndexOf(divider2);
+Console.WriteLine($"Divider 1 is at {div1pos}; Divider 2 is at {div2pos}");
+int part2 = div1pos * div2pos;
+Console.WriteLine($"Part 2: {part2}");
+
 int Compare(object left, object right)
 {
     if (left is int a && right is int b)
