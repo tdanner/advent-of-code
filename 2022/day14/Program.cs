@@ -23,6 +23,12 @@ foreach (var pt in chains.SelectMany(c => c))
     maxy = int.Max(maxy, pt.y);
 }
 
+// make room for floor
+minx -= 200;
+maxx += 200;
+maxy += 2;
+chains.Add(new List<Pt> { new Pt(minx, maxy), new Pt(maxx, maxy) }); // long floor
+
 int w = maxx - minx, h = maxy;
 char[,] field = new char[h + 1, maxx + 2]; // wastes some memory from 0 to minx, but who cares
 for (int y = 0; y <= h; y++)
@@ -54,7 +60,7 @@ int sandCount = 0;
 bool fallingForever = false;
 while (!fallingForever)
 {
-    Console.WriteLine();
+    // Console.WriteLine();
     // PrintField();
     if (field[0, 500] != '.')
     {
@@ -81,6 +87,7 @@ while (!fallingForever)
         }
         if (sand.y >= maxy)
         {
+            Console.WriteLine("floor not wide enough!");
             fallingForever = true;
             break;
         }
