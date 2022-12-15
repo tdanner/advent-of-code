@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Collections;
+using System.Numerics;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using static System.Math;
 
@@ -16,30 +18,23 @@ foreach (var line in lines)
     s.ExclusionDist = Manhattan(s.Loc, b);
     sensors.Add(s);
 }
-
-//Console.WriteLine(JsonSerializer.Serialize(sensors, new JsonSerializerOptions { WriteIndented = true }));
-
-var targetY = 2000000;
-
-var noBeacons = new HashSet<int>();
-foreach (var sensor in sensors)
+const long h = 4000000;
+const long w = 4000000;
+for (int y = 0; y <= h; y++)
 {
-    var range = sensor.ExclusionAtY(targetY);
-    for (int x = range.start; x <= range.end; x++)
+    var possible = new RangeSet();
+    foreach (var sensor in sensors)
     {
-        noBeacons.Add(x);
+        possible.Include(sensor.ExclusionAtY(y));
+    }
+    var candidates = possible.Excluded(new Range(0, (int)w)).ToList();
+    if (candidates.Count > 0)
+    {
+        Console.WriteLine($"count {candidates.Count} {JsonSerializer.Serialize(candidates)} at y {y}");
+        long freq = w * candidates.Single() + (long)y;
+        Console.WriteLine($"Part 2: {freq}");
     }
 }
-foreach (var beacon in beacons)
-{
-    if (beacon.y == targetY)
-    {
-        noBeacons.Remove(beacon.x);
-    }
-}
-
-var part1 = noBeacons.Count;
-Console.WriteLine($"Part 1: {part1}");
 
 int Manhattan(Pt a, Pt b) => Abs(a.x - b.x) + Abs(a.y - b.y);
 
@@ -67,5 +62,38 @@ record struct Pt(int x, int y)
 record class Range(int start, int end)
 {
     public static Range Empty = new Range(1, 0);
-    public bool Contains(int x) => x >= start && x <= end;
+}
+
+class RangeSet
+{
+    List<Range> included = new();
+
+    public void Include(Range r)
+    {
+        if (r != Range.Empty)
+        {
+            included.Add(r);
+        }
+    }
+
+    public IEnumerable<int> Excluded(Range toScan)
+    {
+        for (int x = toScan.start; x <= toScan.end; x++)
+        {
+            bool inRange = true;
+            foreach (var include in included)
+            {
+                if (x >= include.start && x <= include.end)
+                {
+                    x = Max(x, include.end);
+                    inRange = false;
+                    break;
+                }
+            }
+            if (inRange)
+            {
+                yield return x;
+            }
+        }
+    }
 }
