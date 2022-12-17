@@ -11,10 +11,11 @@ internal static class Program
     static Dictionary<ulong, Dictionary<ulong, ulong>> directionsTo = new();
     static int numValvesToOpen;
     static ulong allValvesBits;
+    static List<ulong> allValvesBitsList = new();
 
     private static void Main(string[] args)
     {
-        var lines = File.ReadAllLines("input.txt");
+        var lines = File.ReadAllLines("sample.txt");
         var parser = new Regex(@"Valve ([A-Z][A-Z]) has flow rate=(\d+); tunnels? leads? to valves? ([A-Z, ]+)");
 
         ulong valveBit = 1;
@@ -31,10 +32,6 @@ internal static class Program
         Console.WriteLine(JsonSerializer.Serialize(tunnels));
         numValvesToOpen = flowRates.Values.Count(f => f > 0);
 
-        foreach (ulong valve in flowRateBits.Keys)
-        {
-            directionsTo[valve] = HowToGetTo(valve);
-        }
 
         Console.WriteLine("graph");
         foreach (var (v, ts) in tunnels)
@@ -44,6 +41,7 @@ internal static class Program
             if (flowRates[v] > 0)
             {
                 allValvesBits |= valveBits[v];
+                allValvesBitsList.Add(valveBits[v]);
             }
             foreach (var t in ts)
             {
@@ -52,10 +50,12 @@ internal static class Program
             }
         }
 
-        // State start = new State("AA", new List<string>(), 1, 0, 0);
-        // DFS(start);
+        foreach (ulong valve in flowRateBits.Keys)
+        {
+            directionsTo[valve] = HowToGetTo(valve);
+        }
         ulong aa = valveBits["AA"];
-        State2 start = new State2(aa, aa, 0, 1, 0, 0, 0);
+        State2 start = new State2(aa, aa, 0, 1, 0);
         DFS2(start);
     }
 
@@ -98,7 +98,7 @@ internal static class Program
                 bestReleased = here.Released;
                 Console.WriteLine($"Got a final state with released {here.Released} and time {here.Time}");
             }
-            if (pathsSearched % 10000000 == 0)
+            if (pathsSearched % 1000000 == 0)
             {
                 Console.WriteLine($"Searched {pathsSearched} paths; best = {bestReleased}");
             }
@@ -111,7 +111,7 @@ internal static class Program
         }
     }
 
-    record struct State2(ulong YLoc, ulong ELoc, ulong Open, int Time, int Released, ulong YVisited, ulong EVisited)
+    record struct State2(ulong YLoc, ulong ELoc, ulong Open, int Time, int Released)
     {
         public int Releasing
         {
@@ -129,15 +129,32 @@ internal static class Program
             }
         }
 
-        public IEnumerable<ulong> GetReasonableMoves(ulong start, ulong visited)
+        public static IEnumerable<ulong> GetBits(ulong mask)
         {
-            foreach (ulong next in tunnelBits[start])
+            return Enumerable.Range(0, 64).Select(i => 1UL << i).Where(b => (b & mask) != 0);
+            // for (int i = 0; i < 64; i++)
+            // {
+            //     ulong bit = mask & (1UL << i);
+            //     if (bit != 0)
+            //     {
+            //         yield return bit;
+            //     }
+            // }
+        }
+
+        public IEnumerable<ulong> GetReasonableMoves(ulong start)
+        {
+            // iterate through the closed valves
+            // return the next step from start to the closed valve, but only once
+            ulong moves = 0;
+            foreach (ulong target in GetBits(allValvesBits & ~Open))
             {
-                if ((next & visited) == 0)
+                if (target != start)
                 {
-                    yield return next;
+                    moves |= directionsTo[target][start];
                 }
             }
+            return GetBits(moves);
         }
 
         public IEnumerable<State2> GetNextStates()
@@ -154,12 +171,12 @@ internal static class Program
                 yield break;
             }
 
-            IEnumerable<ulong> eoptions = GetReasonableMoves(ELoc, EVisited);
+            IEnumerable<ulong> eoptions = GetReasonableMoves(ELoc);
             if (flowRateBits[ELoc] > 0 && ((Open & ELoc) == 0))
             {
                 eoptions = eoptions.Append(0UL);
             }
-            IEnumerable<ulong> yoptions = GetReasonableMoves(YLoc, YVisited);
+            IEnumerable<ulong> yoptions = GetReasonableMoves(YLoc);
             if (flowRateBits[YLoc] > 0 && ((Open & YLoc) == 0) && YLoc != ELoc) // if Y and E are on the save valve, only E opens it
             {
                 yoptions = yoptions.Append(0UL);
@@ -183,9 +200,7 @@ internal static class Program
                         enext == 0UL ? ELoc : enext,
                         open,
                         Time + 1,
-                        Released + Releasing,
-                        ynext == 0 ? 0 : YVisited | ynext,
-                        enext == 0 ? 0 : EVisited | enext
+                        Released + Releasing
                     );
                 }
             }
