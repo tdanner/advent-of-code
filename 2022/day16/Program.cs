@@ -1,119 +1,140 @@
 ﻿using System.Text.Json;
 using System.Text.RegularExpressions;
 
-var lines = File.ReadAllLines("sample.txt");
-var parser = new Regex(@"Valve ([A-Z][A-Z]) has flow rate=(\d+); tunnels? leads? to valves? ([A-Z, ]+)");
-var flowRates = new Dictionary<string, int>();
-var tunnels = new Dictionary<string, string[]>();
-foreach (var line in lines)
+internal class Program
 {
-    var m = parser.Match(line);
-    var id = m.Groups[1].Value;
-    flowRates[id] = int.Parse(m.Groups[2].Value);
-    tunnels[id] = m.Groups[3].Value.Split(", ");
-}
-Console.WriteLine(JsonSerializer.Serialize(flowRates));
-Console.WriteLine(JsonSerializer.Serialize(tunnels));
+    static Dictionary<string, int> flowRates = new();
+    static Dictionary<string, string[]> tunnels = new();
 
-// First cut: greedy algorithm. Go to the valve that will release the most total pressure,
-// taking into account the time remaining and the time required to get there. And opening 
-// valves along the way, I guess?
-var openValves = new List<string>();
-int time = 1;
-string loc = "AA";
-int pressureReleased = 0;
-while (time <= 30)
-{
-    // calculated the expected value of moving to each valve
-    // foreach valve that is still closed,
-    // value = (30 - (time + dist[valve] + 1)) * flowRate[valve]
-    int bestValue = 0;
-    List<string> pathToBestValve = new List<string>();
-    foreach (var valve in tunnels.Keys.Where(v => flowRates[v] > 0 && !openValves.Contains(v)))
+    private static void Main(string[] args)
     {
-        var path = ShortestPath(loc, valve);
-        var value = (30 - (time + path.Count)) * flowRates[valve];
-        Console.WriteLine($"Could travel to {valve} (rate {flowRates[valve]}) in {path.Count - 1} steps, for an expected value of {value}");
-        if (value > bestValue)
+        var lines = File.ReadAllLines("input.txt");
+        var parser = new Regex(@"Valve ([A-Z][A-Z]) has flow rate=(\d+); tunnels? leads? to valves? ([A-Z, ]+)");
+
+        foreach (var line in lines)
         {
-            bestValue = value;
-            pathToBestValve = path;
+            var m = parser.Match(line);
+            var id = m.Groups[1].Value;
+            flowRates[id] = int.Parse(m.Groups[2].Value);
+            tunnels[id] = m.Groups[3].Value.Split(", ");
         }
-    }
-    if (pathToBestValve.Count > 0)
-    {
-        // execute!
-        foreach (var step in pathToBestValve.Skip(1))
+        Console.WriteLine(JsonSerializer.Serialize(flowRates));
+        Console.WriteLine(JsonSerializer.Serialize(tunnels));
+
+        Console.WriteLine("graph");
+        foreach (var (v, ts) in tunnels)
         {
-            UpdateState();
-            Console.WriteLine($"You move to {step}");
-            loc = step;
-        }
-
-        UpdateState();
-        string toOpen = pathToBestValve.Last();
-        Console.WriteLine($"You open valve {toOpen}");
-        openValves.Add(toOpen);
-    }
-    else
-    {
-        UpdateState();
-    }
-}
-Console.WriteLine($"Total pressure released: {pressureReleased}");
-
-void UpdateState()
-{
-    int releasing = openValves.Select(v => flowRates[v]).Sum();
-    pressureReleased += releasing;
-    Console.WriteLine($"\n== Minute {time} ==");
-    time++;
-    if (openValves!.Count == 0)
-    {
-        Console.WriteLine("No valves are open.");
-    }
-    else
-    {
-        Console.WriteLine($"Valves {string.Join(", ", openValves)} are open, releasing {releasing} pressure.");
-    }
-}
-
-// Note that the sample plan _does_ require backtracking to II
-
-List<string> ShortestPath(string src, string dst)
-{
-    var dist = tunnels!.Keys.ToDictionary(k => k, k => int.MaxValue);
-    var prev = new Dictionary<string, string>();
-    var q = new HashSet<string>(tunnels.Keys);
-    dist[src] = 0;
-
-    while (q.Count > 0)
-    {
-        string u = q.MinBy(x => dist[x])!;
-        if (u == dst)
-        {
-            break;
-        }
-        q.Remove(u);
-        foreach (var v in tunnels[u].Where(q.Contains))
-        {
-            var alt = dist[u] + 1;
-            if (alt < dist[v])
+            foreach (var t in ts)
             {
-                dist[v] = alt;
-                prev[v] = u;
+                string rate = flowRates[v] > 0 ? $" {flowRates[v]}" : "";
+                Console.WriteLine($"\t{v}[{v}{rate}] --> {t}");
+            }
+        }
+
+        State start = new State("AA", new List<string>(), 1, 0, 0);
+        DFS(start);
+    }
+
+    static List<string> ShortestPath(string src, string dst)
+    {
+        var dist = tunnels!.Keys.ToDictionary(k => k, k => int.MaxValue);
+        var prev = new Dictionary<string, string>();
+        var q = new HashSet<string>(tunnels.Keys);
+        dist[src] = 0;
+
+        while (q.Count > 0)
+        {
+            string u = q.MinBy(x => dist[x])!;
+            if (u == dst)
+            {
+                break;
+            }
+            q.Remove(u);
+            foreach (var v in tunnels[u].Where(q.Contains))
+            {
+                var alt = dist[u] + 1;
+                if (alt < dist[v])
+                {
+                    dist[v] = alt;
+                    prev[v] = u;
+                }
+            }
+        }
+
+        var path = new List<string>();
+        var w = dst;
+        path.Add(w);
+        while (prev.TryGetValue(w, out var v))
+        {
+            w = v;
+            path.Add(w);
+        }
+        path.Reverse();
+        return path;
+    }
+
+    static int bestReleased = 0;
+    static int pathsSearched = 0;
+    static void DFS(State here)
+    {
+        var options = here.GetNextStates().ToList();
+        if (options.Count == 0)
+        {
+            int releasing = here.Releasing;
+            for (int t = here.Time; t <= 30; t++)
+            {
+                here = here with { Time = t, Released = here.Released + releasing };
+            }
+            pathsSearched++;
+            if (here.Released > bestReleased)
+            {
+                bestReleased = here.Released;
+                Console.WriteLine($"Got a final state with released {here.Released} and time {here.Time}");
+            }
+            return;
+        }
+
+        options.Sort((s1, s2) => -s1.JustOpened.CompareTo(s2.JustOpened));
+        foreach (var next in options)
+        {
+            DFS(next);
+        }
+    }
+
+    record struct State(string Loc, List<string> Open, int Time, int Released, int JustOpened)
+    {
+        public int Releasing => Open.Select(v => flowRates[v]).Sum();
+        public IEnumerable<State> GetNextStates()
+        {
+            var open = Open;
+            // iterate through the valves that are not yet open and return a state for each one
+            // that represents traveling to that valve and opening it
+            foreach (var dest in tunnels.Keys.Where(v => flowRates[v] > 0 && !open.Contains(v)))
+            {
+                var path = ShortestPath(Loc, dest);
+                if (Time + path.Count > 30)
+                {
+                    continue; // not a viable path
+                }
+                int releasing = Releasing;
+                int released = Released;
+                int time = Time;
+                foreach (var step in path)
+                {
+                    time++;
+                    released += releasing;
+                }
+                var nowOpen = new List<string>(open);
+                nowOpen.Add(dest);
+                yield return new State(dest, nowOpen, time, released, flowRates[dest]);
             }
         }
     }
-
-    var path = new List<string>();
-    var w = dst;
-    path.Add(w);
-    while (prev.TryGetValue(w, out var v))
-    {
-        w = v;
-        path.Add(w);
-    }
-    path.Reverse();
-    return path;
 }
+
+// we are going to be searching though path space to find the best terminal state
+// a terminal state has Time=30
+// the best terminal state has the highest Flowed
+// a state transition consists of travelling to another valve and opening it
+// we will use recursion to explore the state space, which means states need to immutable
+// would it be crazy to use a bitmask to represent the open valves? I don't think that would be crazy
