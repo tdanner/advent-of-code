@@ -4,6 +4,7 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
+        var startTime = DateTime.Now;
         var winds = File.ReadAllText("input.txt");
         int t = 0;
         List<ushort> chamber = new(); // 0 is the bottom
@@ -28,7 +29,7 @@ internal static class Program
 
             while (true)
             {
-                char wind = winds[t % winds.Length];
+                char wind = winds[t];
                 if (wind == '<')
                 {
                     if (bx > 0 && !Collides(-1, 0))
@@ -76,15 +77,20 @@ internal static class Program
             topOfStack = Math.Max(topOfStack, by + block.Count);
 
             Print("Rock falls 1 unit, causing it to come to rest:");
-            if (blockNum > 0 && blockNum % (blocks.Count * winds.Length) == 0)
+            // if (blockNum > 0 && blockNum % (blocks.Count * winds.Length) == 0)
+            // {
+            //     int diff = topOfStack - prevTop;
+            //     growthPerCycle.Add(diff);
+            //     prevTop = topOfStack;
+            //     // Console.WriteLine();
+            //     // Console.WriteLine(string.Join(", ", growthPerCycle.Select(p => p.ToString())));
+            //     FindPeriodicity();
+            //     // Console.WriteLine($"Top of stack is {topOfStack} after {blockNum + 1} blocks");
+            // }
+            if (blockNum % 1_000_000 == 0)
             {
-                int diff = topOfStack - prevTop;
-                growthPerCycle.Add(diff);
-                prevTop = topOfStack;
-                // Console.WriteLine();
-                // Console.WriteLine(string.Join(", ", growthPerCycle.Select(p => p.ToString())));
-                FindPeriodicity();
-                // Console.WriteLine($"Top of stack is {topOfStack} after {blockNum + 1} blocks");
+                var elapsed = DateTime.Now - startTime;
+                Console.WriteLine($"Dropped {blockNum / 1_000_000}M blocks in {blockNum / elapsed.TotalSeconds,0.00} blocks/sec");
             }
         }
 
