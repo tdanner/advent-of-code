@@ -76,6 +76,15 @@ internal static class Program
             }
             topOfStack = Math.Max(topOfStack, by + block.Count);
 
+
+            ushort topShape = chamber[topOfStack - 1];
+            if (topShape == 0b1111111 || blockNum % 1_000_000 == 0)
+            {
+                string v = Convert.ToString((byte)topShape, 2);
+                v = v.PadLeft(7, '0');
+                Console.WriteLine($"Block #{blockNum} top of stack {v}");
+                Thread.Sleep(100);
+            }
             Print("Rock falls 1 unit, causing it to come to rest:");
             // if (blockNum > 0 && blockNum % (blocks.Count * winds.Length) == 0)
             // {
@@ -90,7 +99,7 @@ internal static class Program
             if (blockNum % 1_000_000 == 0)
             {
                 var elapsed = DateTime.Now - startTime;
-                Console.WriteLine($"Dropped {blockNum / 1_000_000}M blocks in {blockNum / elapsed.TotalSeconds,0.00} blocks/sec");
+                // Console.WriteLine($"Dropped {blockNum / 1_000_000}M blocks in {blockNum / elapsed.TotalSeconds,0.00} blocks/sec");
             }
         }
 
