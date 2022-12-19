@@ -1,23 +1,28 @@
 ﻿using System.Diagnostics;
+using System.Text.Json;
 
 internal static class Program
 {
+    record struct State(int windIdx, int blockIdx, byte top, byte second);
+    record struct Height(int height, long bnum);
     private static void Main(string[] args)
     {
         var startTime = DateTime.Now;
         var winds = File.ReadAllText("input.txt");
         int t = 0;
-        List<ushort> chamber = new(); // 0 is the bottom
-        int topOfStack = 0, prevTop = 0;
+        List<byte> chamber = new(); // 0 is the bottom
+        int topOfStack = 0;
         int by = 0, bx = 0;
-        List<ushort> block = blocks[0];
-        int blockNum = 0;
+        List<byte> block = blocks[0];
+        long blockNum = 0;
         List<int> growthPerCycle = new();
+        Dictionary<State, Height> heights = new();
+        long heightCreatedByRepeats = 0;
 
-        for (blockNum = 0; blockNum < 1_000_000_000; blockNum++)
+        for (blockNum = 0; blockNum < 1_000_000_000_000; blockNum++)
         {
-            block = blocks[blockNum % blocks.Count];
-            int blockWidth = blockWidths[blockNum % blocks.Count];
+            block = blocks[(int)(blockNum % blocks.Count)];
+            int blockWidth = blockWidths[(int)(blockNum % blocks.Count)];
             bx = 2; // block always starts 2 spaces from the left
             by = topOfStack + 3; // block starts with its bottom 3 from the top of the stack
             while (chamber.Count < by + block.Count)
@@ -72,71 +77,59 @@ internal static class Program
             // Apply the resting block to the chamber
             for (int y = 0; y < block.Count; y++)
             {
-                chamber[y + by] |= (ushort)(block[y] << bx);
+                chamber[y + by] |= (byte)(block[y] << bx);
             }
             topOfStack = Math.Max(topOfStack, by + block.Count);
 
+            var shape2string = (byte s) => Convert.ToString((byte)s, 2).PadLeft(7, '0');
 
-            ushort topShape = chamber[topOfStack - 1];
-            if (topShape == 0b1111111 || blockNum % 1_000_000 == 0)
+            if (heightCreatedByRepeats == 0 && topOfStack > 2)
             {
-                string v = Convert.ToString((byte)topShape, 2);
-                v = v.PadLeft(7, '0');
-                Console.WriteLine($"Block #{blockNum} top of stack {v}");
-                Thread.Sleep(100);
+                byte topShape = chamber[topOfStack - 1];
+                byte secondShape = chamber[topOfStack - 2];
+                if ((topShape | secondShape) == 0b1111111)
+                {
+                    State s = new State(t, (int)(blockNum % blocks.Count), topShape, secondShape);
+                    if (heights.TryGetValue(s, out Height h))
+                    {
+                        //Console.WriteLine($"State has repeated after growing {topOfStack - h.height} lines with {blockNum - h.bnum} blocks: {s}");
+                        long blocksRemaining = 1_000_000_000_000 - blockNum;
+                        long remainderAfterRepeats = blocksRemaining % (blockNum - h.bnum);
+                        long repeatsNeeded = blocksRemaining / (blockNum - h.bnum);
+                        heightCreatedByRepeats = repeatsNeeded * (topOfStack - h.height);
+                        long finalHeight = topOfStack + heightCreatedByRepeats;
+                        Console.WriteLine(JsonSerializer.Serialize(new
+                        {
+                            h,
+                            blockNum,
+                            topOfStack,
+                            remainderAfterRepeats,
+                            repeatsNeeded,
+                            heightCreatedByRepeats,
+                            finalHeight
+                        }, new JsonSerializerOptions { WriteIndented = true }));
+
+                        blockNum += (blockNum - h.bnum) * repeatsNeeded;
+
+                    }
+                    heights[s] = new Height(topOfStack, blockNum);
+                    Console.WriteLine($"Tracking {heights.Count} states, blocknum={blockNum}");
+                    // string v = Convert.ToString((byte)topShape, 2);
+                    // v = v.PadLeft(7, '0');
+                    // Console.WriteLine($"Block #{blockNum} top of stack {shape2string(topShape)},{shape2string(secondShape)}");
+                    // Thread.Sleep(100);
+                }
             }
             Print("Rock falls 1 unit, causing it to come to rest:");
-            // if (blockNum > 0 && blockNum % (blocks.Count * winds.Length) == 0)
-            // {
-            //     int diff = topOfStack - prevTop;
-            //     growthPerCycle.Add(diff);
-            //     prevTop = topOfStack;
-            //     // Console.WriteLine();
-            //     // Console.WriteLine(string.Join(", ", growthPerCycle.Select(p => p.ToString())));
-            //     FindPeriodicity();
-            //     // Console.WriteLine($"Top of stack is {topOfStack} after {blockNum + 1} blocks");
-            // }
-            if (blockNum % 1_000_000 == 0)
-            {
-                var elapsed = DateTime.Now - startTime;
-                // Console.WriteLine($"Dropped {blockNum / 1_000_000}M blocks in {blockNum / elapsed.TotalSeconds,0.00} blocks/sec");
-            }
         }
-
-        void FindPeriodicity()
-        {
-            Console.WriteLine($"Trying periods up to {growthPerCycle.Count / 2}");
-            for (int period = 1; period < growthPerCycle.Count / 2; period++)
-            {
-                bool periodGood = true;
-                for (int i = 0; periodGood && i < period; i++)
-                {
-                    for (int j = 0; j < growthPerCycle.Count; j += period)
-                    {
-                        if (growthPerCycle[i] != growthPerCycle[j])
-                        {
-                            periodGood = false;
-                            break;
-                        }
-                    }
-                }
-                if (periodGood)
-                {
-                    Console.WriteLine($"Found period {period}!");
-                    Console.WriteLine($"Every {period * blocks.Count * winds.Length} blocks");
-                    Console.WriteLine($"The stack increases by {growthPerCycle.Take(period).Sum()} lines");
-                    Console.WriteLine($"The stack increases by {growthPerCycle.Skip(100).Take(period).Sum()} lines");
-                    // Environment.Exit(0);
-                }
-            }
-        }
+        Console.WriteLine($"Part 2: {topOfStack + heightCreatedByRepeats}");
 
         bool Collides(int dx, int dy)
         {
             for (int y = 0; y < block.Count; y++)
             {
-                ushort br = (ushort)(block[y] << (bx + dx));
-                ushort cr = chamber[by + dy + y];
+                byte br = (byte)(block[y] << (bx + dx));
+                byte cr = chamber[by + dy + y];
                 if ((br & cr) != 0)
                 {
                     return true;
@@ -181,30 +174,29 @@ internal static class Program
         }
     }
 
-    static List<ushort> block1 = new() {
+    static List<byte> block1 = new() {
         0b1111,
     };
-    static List<ushort> block2 = new(){
+    static List<byte> block2 = new(){
         0b010,
         0b111,
         0b010,
     };
-    static List<ushort> block3 = new(){
+    static List<byte> block3 = new(){
         0b111,
         0b100,
         0b100,
     };
-    static List<ushort> block4 = new(){
+    static List<byte> block4 = new(){
         0b1,
         0b1,
         0b1,
         0b1,
     };
-    static List<ushort> block5 = new(){
+    static List<byte> block5 = new(){
         0b11,
         0b11,
     };
-    static List<List<ushort>> blocks = new() { block1, block2, block3, block4, block5 };
+    static List<List<byte>> blocks = new() { block1, block2, block3, block4, block5 };
     static List<int> blockWidths = new() { 4, 3, 3, 1, 2 };
-
 }
