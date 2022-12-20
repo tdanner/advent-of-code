@@ -1,23 +1,35 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 static class Program
 {
     static Regex parser = new Regex(@"Blueprint (\d+): Each ore robot costs (\d+) ore. Each clay robot costs (\d+) ore. Each obsidian robot costs (\d+) ore and (\d+) clay. Each geode robot costs (\d+) ore and (\d+) obsidian.");
-    const int TimeLimit = 24;
+    public const int TimeLimit = 24;
 
     public static void Main()
     {
-        var lines = File.ReadAllLines("sample.txt");
+        var lines = File.ReadAllLines("input.txt");
         var blueprints = lines.Select(l => parser.Match(l)).Select(m =>
             new Blueprint(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value), int.Parse(m.Groups[3].Value), int.Parse(m.Groups[4].Value), int.Parse(m.Groups[5].Value), int.Parse(m.Groups[6].Value), int.Parse(m.Groups[7].Value))
         ).ToList();
         // Dump(blueprints);
-        int max = MaxGeodes(blueprints[0]);
-        Console.WriteLine(max);
+        // int max = MaxGeodesBFS(blueprints[0]);
+        long totalQuality = 0;
+        foreach (var bp in blueprints)
+        {
+            dfsMax = 0;
+            var start = new State(0, 1, 0, 0, 0, 0, 0, 0, 0);
+            int max = MaxGeodesDFS(bp, start);
+            Console.WriteLine($"Blueprint {bp.id} gets max {max} geodes");
+            totalQuality += bp.id * max;
+        }
+        Console.WriteLine($"Total quality: {totalQuality}");
     }
 
-    private static int MaxGeodes(Blueprint bp)
+    public static int dfsMax = 0;
+
+    private static int MaxGeodesBFS(Blueprint bp)
     {
         // going to try a BFS out to 24 rounds! I haven't done the math on this. it might take a trillion years.
         var start = new State(0, 1, 0, 0, 0, 0, 0, 0, 0);
@@ -56,16 +68,51 @@ static class Program
         return max;
     }
 
+    private static int MaxGeodesDFS(Blueprint bp, State now)
+    {
+        if (now.time == TimeLimit)
+        {
+            if (now.geo > dfsMax)
+            {
+                dfsMax = now.geo;
+                // if (dfsMax == 8)
+                // {
+                //     Console.WriteLine(now.story);
+                //     Debugger.Break();
+                // }
+                Console.WriteLine($"Max so far: {dfsMax}");
+            }
+            return now.geo;
+        }
+
+        int max = 0;
+        foreach (var next in now.Options(bp))
+        {
+            max = Math.Max(max, MaxGeodesDFS(bp, next));
+        }
+        return max;
+    }
+
     private static void Dump<T>(T obj, string prefix = "")
     {
         Console.WriteLine(prefix + JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true }));
     }
 }
 
-record struct State(byte time, byte oreBots, byte clayBots, byte obsBots, byte geoBots, byte ore, byte clay, byte obs, byte geo)
+record struct State(byte time, byte oreBots, byte clayBots, byte obsBots, byte geoBots,
+byte ore, byte clay, byte obs, byte geo
+//, Story? story
+)
 {
     public IEnumerable<State> Options(Blueprint bp)
     {
+        int timeLeft = (Program.TimeLimit - time);
+        int maxPossibleGeodes = geo + geoBots * timeLeft + timeLeft * (timeLeft + 1) / 2;
+        if (maxPossibleGeodes < Program.dfsMax)
+        {
+            yield break; // give up - can't possibly win
+        }
+
         // the existing robots always gather their stuff - these are always the same
         // the options are basically make one of each robot or make no robots
         // is there ever a scenario where you would build two robots in one minute? I hope not.
@@ -76,49 +123,68 @@ record struct State(byte time, byte oreBots, byte clayBots, byte obsBots, byte g
             ore = (byte)(ore + oreBots),
             clay = (byte)(clay + clayBots),
             obs = (byte)(obs + obsBots),
-            geo = (byte)(geo + geoBots)
+            geo = (byte)(geo + geoBots),
         };
-        yield return doNothing;
+
+        // string happenings = $"\n== Minute {doNothing.time} ==\n{oreBots} ore-collecting robots collects {oreBots} ore; you now have {doNothing.ore} ore.\n";
+        // if (clayBots > 0)
+        // {
+        //     happenings += $"{clayBots} clay-collecting robots collects {clayBots} clay; you now have {doNothing.clay} clay.\n";
+        // }
+        // if (obsBots > 0)
+        // {
+        //     happenings += $"{obsBots} obsidian-collecting robots collects {obsBots} obsidian; you now have {doNothing.obs} obsidian.\n";
+        // }
+        // if (geoBots > 0)
+        // {
+        //     happenings += $"{geoBots} geode-cracking robots cracks {geoBots} geode; you now have {doNothing.geo} open geodes.\n";
+        // }
+
+        yield return doNothing;// with { story = new Story(happenings, story) };
 
         // ** make an ore bot
-        if (doNothing.ore >= bp.oreBotOre && oreBots < bp.MaxOreBots)
+        if (time < Program.TimeLimit - 1 && ore >= bp.oreBotOre && oreBots < bp.MaxOreBots)
         {
             yield return doNothing with
             {
                 ore = (byte)(doNothing.ore - bp.oreBotOre),
                 oreBots = (byte)(oreBots + 1),
+                //story = new Story($"{happenings}Spend {bp.oreBotOre} ore to start building a ore-collecting robot.\n", story),
             };
         }
 
         // ** make a clay bot
-        if (doNothing.ore >= bp.clayBotOre && clayBots < bp.MaxClayBots)
+        if (time < Program.TimeLimit - 1 && ore >= bp.clayBotOre && clayBots < bp.MaxClayBots)
         {
             yield return doNothing with
             {
                 ore = (byte)(doNothing.ore - bp.clayBotOre),
                 clayBots = (byte)(clayBots + 1),
+                //story = new Story($"{happenings}Spend {bp.clayBotOre} ore to start building a clay-collecting robot.\n", story),
             };
         }
 
         // ** make an obsidian bot
-        if (doNothing.ore >= bp.obsBotOre && doNothing.clay >= bp.obsBotClay && obsBots < bp.MaxObsBots)
+        if (time < Program.TimeLimit - 1 && ore >= bp.obsBotOre && clay >= bp.obsBotClay && obsBots < bp.MaxObsBots)
         {
             yield return doNothing with
             {
                 ore = (byte)(doNothing.ore - bp.obsBotOre),
-                clay = (byte)(doNothing.ore - bp.clayBotOre),
+                clay = (byte)(doNothing.clay - bp.obsBotClay),
                 obsBots = (byte)(obsBots + 1),
+                //story = new Story($"{happenings}Spend {bp.obsBotOre} ore and {bp.obsBotClay} clay to start building a obsidian-collecting robot.\n", story),
             };
         }
 
         // ** make a geode bot
-        if (doNothing.ore >= bp.geoBotOre && doNothing.obs >= bp.geoBotObs)
+        if (time < Program.TimeLimit && ore >= bp.geoBotOre && obs >= bp.geoBotObs)
         {
             yield return doNothing with
             {
                 ore = (byte)(doNothing.ore - bp.geoBotOre),
                 obs = (byte)(doNothing.obs - bp.geoBotObs),
                 geoBots = (byte)(geoBots + 1),
+                //story = new Story($"{happenings}Spend {bp.geoBotOre} ore and {bp.geoBotObs} obsidian to start building a geode-cracking robot.\n", story),
             };
         }
     }
@@ -129,4 +195,13 @@ record class Blueprint(int id, int oreBotOre, int clayBotOre, int obsBotOre, int
     public int MaxOreBots { get; init; } = new[] { oreBotOre, clayBotOre, obsBotOre, geoBotOre }.Max();
     public int MaxClayBots { get; init; } = new[] { obsBotClay }.Max();
     public int MaxObsBots { get; init; } = new[] { geoBotObs }.Max();
+}
+
+record class Story(string episode, Story? before)
+{
+    public override string ToString()
+    {
+        string s = before?.ToString() ?? "";
+        return s + episode;
+    }
 }
