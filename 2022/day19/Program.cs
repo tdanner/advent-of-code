@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 static class Program
 {
     static Regex parser = new Regex(@"Blueprint (\d+): Each ore robot costs (\d+) ore. Each clay robot costs (\d+) ore. Each obsidian robot costs (\d+) ore and (\d+) clay. Each geode robot costs (\d+) ore and (\d+) obsidian.");
-    public const int TimeLimit = 24;
+    public const int TimeLimit = 32;
 
     public static void Main()
     {
@@ -16,7 +16,7 @@ static class Program
         // Dump(blueprints);
         // int max = MaxGeodesBFS(blueprints[0]);
         long totalQuality = 0;
-        foreach (var bp in blueprints)
+        foreach (var bp in blueprints.Take(3))
         {
             dfsMax = 0;
             var start = new State(0, 1, 0, 0, 0, 0, 0, 0, 0);
@@ -126,41 +126,14 @@ byte ore, byte clay, byte obs, byte geo
             geo = (byte)(geo + geoBots),
         };
 
-        // string happenings = $"\n== Minute {doNothing.time} ==\n{oreBots} ore-collecting robots collects {oreBots} ore; you now have {doNothing.ore} ore.\n";
-        // if (clayBots > 0)
-        // {
-        //     happenings += $"{clayBots} clay-collecting robots collects {clayBots} clay; you now have {doNothing.clay} clay.\n";
-        // }
-        // if (obsBots > 0)
-        // {
-        //     happenings += $"{obsBots} obsidian-collecting robots collects {obsBots} obsidian; you now have {doNothing.obs} obsidian.\n";
-        // }
-        // if (geoBots > 0)
-        // {
-        //     happenings += $"{geoBots} geode-cracking robots cracks {geoBots} geode; you now have {doNothing.geo} open geodes.\n";
-        // }
-
-        yield return doNothing;// with { story = new Story(happenings, story) };
-
-        // ** make an ore bot
-        if (time < Program.TimeLimit - 1 && ore >= bp.oreBotOre && oreBots < bp.MaxOreBots)
+        // ** make a geode bot
+        if (time < Program.TimeLimit && ore >= bp.geoBotOre && obs >= bp.geoBotObs)
         {
             yield return doNothing with
             {
-                ore = (byte)(doNothing.ore - bp.oreBotOre),
-                oreBots = (byte)(oreBots + 1),
-                //story = new Story($"{happenings}Spend {bp.oreBotOre} ore to start building a ore-collecting robot.\n", story),
-            };
-        }
-
-        // ** make a clay bot
-        if (time < Program.TimeLimit - 1 && ore >= bp.clayBotOre && clayBots < bp.MaxClayBots)
-        {
-            yield return doNothing with
-            {
-                ore = (byte)(doNothing.ore - bp.clayBotOre),
-                clayBots = (byte)(clayBots + 1),
-                //story = new Story($"{happenings}Spend {bp.clayBotOre} ore to start building a clay-collecting robot.\n", story),
+                ore = (byte)(doNothing.ore - bp.geoBotOre),
+                obs = (byte)(doNothing.obs - bp.geoBotObs),
+                geoBots = (byte)(geoBots + 1),
             };
         }
 
@@ -172,21 +145,30 @@ byte ore, byte clay, byte obs, byte geo
                 ore = (byte)(doNothing.ore - bp.obsBotOre),
                 clay = (byte)(doNothing.clay - bp.obsBotClay),
                 obsBots = (byte)(obsBots + 1),
-                //story = new Story($"{happenings}Spend {bp.obsBotOre} ore and {bp.obsBotClay} clay to start building a obsidian-collecting robot.\n", story),
             };
         }
 
-        // ** make a geode bot
-        if (time < Program.TimeLimit && ore >= bp.geoBotOre && obs >= bp.geoBotObs)
+        // ** make a clay bot
+        if (time < Program.TimeLimit - 1 && ore >= bp.clayBotOre && clayBots < bp.MaxClayBots)
         {
             yield return doNothing with
             {
-                ore = (byte)(doNothing.ore - bp.geoBotOre),
-                obs = (byte)(doNothing.obs - bp.geoBotObs),
-                geoBots = (byte)(geoBots + 1),
-                //story = new Story($"{happenings}Spend {bp.geoBotOre} ore and {bp.geoBotObs} obsidian to start building a geode-cracking robot.\n", story),
+                ore = (byte)(doNothing.ore - bp.clayBotOre),
+                clayBots = (byte)(clayBots + 1),
             };
         }
+
+        // ** make an ore bot
+        if (time < Program.TimeLimit - 1 && ore >= bp.oreBotOre && oreBots < bp.MaxOreBots)
+        {
+            yield return doNothing with
+            {
+                ore = (byte)(doNothing.ore - bp.oreBotOre),
+                oreBots = (byte)(oreBots + 1),
+            };
+        }
+
+        yield return doNothing;
     }
 }
 
