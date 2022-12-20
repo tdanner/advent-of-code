@@ -1,46 +1,82 @@
 ﻿using System.Diagnostics;
 
-var nums = File.ReadAllLines("sample.txt").Select(short.Parse).ToArray();
+var nums = File.ReadAllLines("input.txt").Select(short.Parse).ToArray();
+var ll = new LinkedList<short>(nums);
+var nodes = new List<LinkedListNode<short>>(ll.Count);
+var n = ll.First;
+while (n != null)
+{
+    nodes.Add(n);
+    n = n.Next;
+}
 var len = nums.Length;
-var mixed = new short[len];
-var offset = new short[len];
-Array.Copy(nums, mixed, len);
-Console.Write("nums:\t");
-Dump(mixed);
+Dump();
 
 for (int i = 0; i < len; i++)
 {
-    var src = i + offset[i];
-    Debug.Assert(mixed[src] == nums[i]); // make sure we are tracking offsets correctly
-    var dst = (i + offset[i] + nums[i]) % len; // where are we going?
-    if (src == dst) // no move? really?
+    if (nums[i] == 0)
+        continue;
+    var src = nodes[i];
+    Debug.Assert(nums[i] == src.Value);
+    Debug.Assert(src.List != null);
+    var dst = src;
+    if ((nums[i] + len * 2) % len == 0)
     {
-        // do nothing
+        continue;
     }
-    if (src < dst) // moving forward. apply a -1 offset
+    if (nums[i] > 0)
     {
-        Array.Copy(mixed, src + 1, mixed, src, dst - src);
-        for (int j = 0; j < dst - src; j++)
+        for (int j = 0; j < nums[i]; j++)
         {
-            offset[j]--;
+            if (dst!.Next == null)
+                dst = ll.First;
+            else
+                dst = dst.Next;
         }
+        ll.Remove(src);
+        ll.AddAfter(dst!, src);
     }
-    else // moving backward. apply a +1 offset
+    else if (nums[i] < 0)
     {
-        Array.Copy(mixed, src, mixed, src + 1, src - dst);
-        for (int j = 0; j < src - dst; j++)
+        for (int j = nums[i]; j < 0; j++)
         {
-            offset[j]++;
+            if (dst!.Previous == null)
+                dst = ll.Last;
+            else
+                dst = dst.Previous;
         }
+        ll.Remove(src);
+        ll.AddBefore(dst!, src);
     }
-    mixed[dst] = nums[i];
-    Console.Write("Mixed:\t");
-    Dump(mixed);
-    Console.Write("Offset:\t");
-    Dump(offset);
+    Dump();
 }
 
-void Dump(short[] a)
+var zero = ll.Find(0)!;
+
+int c1 = Seek(zero, 1000).Value;
+int c2 = Seek(zero, 2000).Value;
+int c3 = Seek(zero, 3000).Value;
+
+Console.WriteLine($"{c1}, {c2}, {c3}, sum: {c1 + c2 + c3}");
+
+LinkedListNode<T> Seek<T>(LinkedListNode<T> start, int dist)
 {
-    Console.WriteLine(string.Join("\t", a));
+    for (int i = 0; i < dist; i++)
+    {
+        if (start!.Next == null)
+            start = start.List!.First!;
+        else
+            start = start.Next;
+    }
+    return start;
+}
+
+
+void Dump()
+{
+    foreach (var n in ll)
+    {
+        //Console.Write("\t" + n);
+    }
+    // Console.WriteLine();
 }
