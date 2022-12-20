@@ -26,10 +26,16 @@ static class Program
         int max = 0;
         int looked = 0;
         int finals = 0;
+        int timeSeen = 0;
         while (q.Any())
         {
             var s = q.Dequeue();
             looked++;
+            if (s.time > timeSeen)
+            {
+                Console.WriteLine($"Time {s.time}");
+                timeSeen = s.time;
+            }
             if (s.time == TimeLimit)
             {
                 //Dump(s);
@@ -56,8 +62,7 @@ static class Program
     }
 }
 
-
-record class State(int time, int oreBots, int clayBots, int obsBots, int geoBots, int ore, int clay, int obs, int geo)
+record struct State(byte time, byte oreBots, byte clayBots, byte obsBots, byte geoBots, byte ore, byte clay, byte obs, byte geo)
 {
     public IEnumerable<State> Options(Blueprint bp)
     {
@@ -67,42 +72,42 @@ record class State(int time, int oreBots, int clayBots, int obsBots, int geoBots
         // -- no: there is only one robot factory and it takes one minute to make a robot
         var doNothing = this with
         {
-            time = time + 1,
-            ore = ore + oreBots,
-            clay = clay + clayBots,
-            obs = obs + obsBots,
-            geo = geo + geoBots
+            time = (byte)(time + 1),
+            ore = (byte)(ore + oreBots),
+            clay = (byte)(clay + clayBots),
+            obs = (byte)(obs + obsBots),
+            geo = (byte)(geo + geoBots)
         };
         yield return doNothing;
 
         // ** make an ore bot
-        if (doNothing.ore >= bp.oreBotOre)
+        if (doNothing.ore >= bp.oreBotOre && oreBots < bp.MaxOreBots)
         {
             yield return doNothing with
             {
-                ore = doNothing.ore - bp.oreBotOre,
-                oreBots = oreBots + 1,
+                ore = (byte)(doNothing.ore - bp.oreBotOre),
+                oreBots = (byte)(oreBots + 1),
             };
         }
 
         // ** make a clay bot
-        if (doNothing.ore >= bp.clayBotOre)
+        if (doNothing.ore >= bp.clayBotOre && clayBots < bp.MaxClayBots)
         {
             yield return doNothing with
             {
-                ore = doNothing.ore - bp.clayBotOre,
-                clayBots = clayBots + 1,
+                ore = (byte)(doNothing.ore - bp.clayBotOre),
+                clayBots = (byte)(clayBots + 1),
             };
         }
 
         // ** make an obsidian bot
-        if (doNothing.ore >= bp.obsBotOre && doNothing.clay >= bp.obsBotClay)
+        if (doNothing.ore >= bp.obsBotOre && doNothing.clay >= bp.obsBotClay && obsBots < bp.MaxObsBots)
         {
             yield return doNothing with
             {
-                ore = doNothing.ore - bp.obsBotOre,
-                clay = doNothing.ore - bp.clayBotOre,
-                obsBots = obsBots + 1,
+                ore = (byte)(doNothing.ore - bp.obsBotOre),
+                clay = (byte)(doNothing.ore - bp.clayBotOre),
+                obsBots = (byte)(obsBots + 1),
             };
         }
 
@@ -111,12 +116,17 @@ record class State(int time, int oreBots, int clayBots, int obsBots, int geoBots
         {
             yield return doNothing with
             {
-                ore = doNothing.ore - bp.geoBotOre,
-                obs = doNothing.obs - bp.geoBotObs,
-                geoBots = geoBots + 1,
+                ore = (byte)(doNothing.ore - bp.geoBotOre),
+                obs = (byte)(doNothing.obs - bp.geoBotObs),
+                geoBots = (byte)(geoBots + 1),
             };
         }
     }
 }
 
-record class Blueprint(int id, int oreBotOre, int clayBotOre, int obsBotOre, int obsBotClay, int geoBotOre, int geoBotObs);
+record class Blueprint(int id, int oreBotOre, int clayBotOre, int obsBotOre, int obsBotClay, int geoBotOre, int geoBotObs)
+{
+    public int MaxOreBots { get; init; } = new[] { oreBotOre, clayBotOre, obsBotOre, geoBotOre }.Max();
+    public int MaxClayBots { get; init; } = new[] { obsBotClay }.Max();
+    public int MaxObsBots { get; init; } = new[] { geoBotObs }.Max();
+}
