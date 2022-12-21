@@ -10,46 +10,34 @@ while (n != null)
     n = n.Next;
 }
 var len = nums.Length;
-Dump();
 
 for (int i = 0; i < len; i++)
 {
-    if (nums[i] == 0)
+    Dump();
+    int moves = nums[i];
+    while (moves < 0)
+        moves += nums.Length - 1;
+    moves %= (nums.Length - 1);
+    // Console.WriteLine($"{nums[i]} -> {moves}");
+    if (moves == 0)
         continue;
+
     var src = nodes[i];
     Debug.Assert(nums[i] == src.Value);
     Debug.Assert(src.List != null);
     var dst = src;
-    if ((nums[i] + len * 2) % len == 0)
+
+    for (int j = 0; j < moves; j++)
     {
-        continue;
+        if (dst!.Next == null)
+            dst = ll.First;
+        else
+            dst = dst.Next;
     }
-    if (nums[i] > 0)
-    {
-        for (int j = 0; j < nums[i]; j++)
-        {
-            if (dst!.Next == null)
-                dst = ll.First;
-            else
-                dst = dst.Next;
-        }
-        ll.Remove(src);
-        ll.AddAfter(dst!, src);
-    }
-    else if (nums[i] < 0)
-    {
-        for (int j = nums[i]; j < 0; j++)
-        {
-            if (dst!.Previous == null)
-                dst = ll.Last;
-            else
-                dst = dst.Previous;
-        }
-        ll.Remove(src);
-        ll.AddBefore(dst!, src);
-    }
-    Dump();
+    ll.Remove(src);
+    ll.AddAfter(dst!, src);
 }
+Dump();
 
 var zero = ll.Find(0)!;
 
@@ -74,9 +62,5 @@ LinkedListNode<T> Seek<T>(LinkedListNode<T> start, int dist)
 
 void Dump()
 {
-    foreach (var n in ll)
-    {
-        //Console.Write("\t" + n);
-    }
-    // Console.WriteLine();
+    // Console.WriteLine(string.Join("\t", ll!.Select(n => n.ToString())));
 }
