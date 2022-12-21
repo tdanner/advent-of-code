@@ -1,8 +1,9 @@
 ﻿using System.Diagnostics;
 
-var nums = File.ReadAllLines("input.txt").Select(short.Parse).ToArray();
-var ll = new LinkedList<short>(nums);
-var nodes = new List<LinkedListNode<short>>(ll.Count);
+const long DecryptionKey = 811589153;
+var nums = File.ReadAllLines("input.txt").Select(long.Parse).Select(n => n * DecryptionKey).ToArray();
+var ll = new LinkedList<long>(nums);
+var nodes = new List<LinkedListNode<long>>(ll.Count);
 var n = ll.First;
 while (n != null)
 {
@@ -11,39 +12,42 @@ while (n != null)
 }
 var len = nums.Length;
 
-for (int i = 0; i < len; i++)
+for (int round = 0; round < 10; round++)
 {
-    Dump();
-    int moves = nums[i];
-    while (moves < 0)
-        moves += nums.Length - 1;
-    moves %= (nums.Length - 1);
-    // Console.WriteLine($"{nums[i]} -> {moves}");
-    if (moves == 0)
-        continue;
-
-    var src = nodes[i];
-    Debug.Assert(nums[i] == src.Value);
-    Debug.Assert(src.List != null);
-    var dst = src;
-
-    for (int j = 0; j < moves; j++)
+    for (int i = 0; i < len; i++)
     {
-        if (dst!.Next == null)
-            dst = ll.First;
-        else
-            dst = dst.Next;
+        // Dump();
+        long moves = nums[i];
+        moves %= (nums.Length - 1);
+        moves += (nums.Length - 1);
+        moves %= (nums.Length - 1);
+        // Console.WriteLine($"{nums[i]} -> {moves}");
+        if (moves == 0)
+            continue;
+
+        var src = nodes[i];
+        Debug.Assert(nums[i] == src.Value);
+        Debug.Assert(src.List != null);
+        var dst = src;
+
+        for (int j = 0; j < moves; j++)
+        {
+            if (dst!.Next == null)
+                dst = ll.First;
+            else
+                dst = dst.Next;
+        }
+        ll.Remove(src);
+        ll.AddAfter(dst!, src);
     }
-    ll.Remove(src);
-    ll.AddAfter(dst!, src);
+    // Dump();
 }
-Dump();
 
 var zero = ll.Find(0)!;
 
-int c1 = Seek(zero, 1000).Value;
-int c2 = Seek(zero, 2000).Value;
-int c3 = Seek(zero, 3000).Value;
+long c1 = Seek(zero, 1000).Value;
+long c2 = Seek(zero, 2000).Value;
+long c3 = Seek(zero, 3000).Value;
 
 Console.WriteLine($"{c1}, {c2}, {c3}, sum: {c1 + c2 + c3}");
 
@@ -62,5 +66,5 @@ LinkedListNode<T> Seek<T>(LinkedListNode<T> start, int dist)
 
 void Dump()
 {
-    // Console.WriteLine(string.Join("\t", ll!.Select(n => n.ToString())));
+    Console.WriteLine(string.Join("\t", ll!.Select(n => n.ToString())));
 }
