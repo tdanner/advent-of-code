@@ -5,22 +5,9 @@ List<Game> games = lines.Select(ParseLine).ToList();
 RGB ok = new RGB { r = 12, g = 13, b = 14 };
 
 var answer = games.Where(g => g.Meets(ok)).Select(g => g.num).Sum();
-
-foreach (Game g in games)
-{
-    if (g.Meets(ok))
-    {
-        Console.Write("Good:   ");
-    }
-    else
-    {
-        Console.Write("Bad :   ");
-    }
-
-    Console.WriteLine(g);
-}
-
-Console.WriteLine(answer);
+Console.WriteLine("part 1: " + answer);
+var part2 = games.Select(g => g.Power()).Sum();
+Console.WriteLine("part 2: " + part2);
 
 Game ParseLine(string line)
 {
@@ -63,6 +50,14 @@ class Game
     public override string ToString()
     {
         return "Game " + num + ": " + string.Join("; ", rgbs.Select(r => r.ToString()));
+    }
+
+    public int Power()
+    {
+        int r = rgbs.Select(rgb => rgb.r).Max();
+        int g = rgbs.Select(rgb => rgb.g).Max();
+        int b = rgbs.Select(rgb => rgb.b).Max();
+        return r * g * b;
     }
 }
 
