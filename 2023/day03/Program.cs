@@ -6,6 +6,7 @@ var sym = new Regex(@"[^\.0-9]");
 var num = new Regex(@"[0-9]+");
 var parts = new List<Part>();
 var map = new bool[lines[0].Length, lines.Length];
+var stars = new List<(int x, int y)>();
 for (int y = 0; y < lines.Length; y++)
 {
     parts.AddRange(num.Matches(lines[y]).Cast<Match>().Select(n =>
@@ -17,7 +18,11 @@ for (int y = 0; y < lines.Length; y++)
             x2 = n.Index + n.Length - 1
         }));
     foreach (var m in sym.Matches(lines[y]).Cast<Match>())
+    {
         map[m.Index, y] = true;
+        if (m.Value == "*")
+            stars.Add((m.Index, y));
+    }
 }
 
 // foreach (var p in parts)
@@ -28,26 +33,37 @@ foreach (var p in parts)
 {
     bool ok = false;
     for (int y = Max(0, p.y - 1); y <= Min(lines.Length - 1, p.y + 1); y++)
-    {
         for (int x = Max(0, p.x1 - 1); x <= Min(lines[0].Length - 1, p.x2 + 1); x++)
-        {
             ok |= map[x, y];
-        }
-    }
     if (ok)
-    {
         total += p.num;
-    }
-    else
+}
+
+Console.WriteLine("part 1: " + total);
+
+Console.WriteLine($"stars: {stars.Count}");
+
+int allgears = 0;
+foreach (var (sx, sy) in stars)
+{
+    var adj = parts.Where(p => p.IsAdjacent(sx, sy)).ToList();
+    if (adj.Count == 2)
     {
-        Console.WriteLine($"Not ok {p.num}");
+        int ratio = adj[0].num * adj[1].num;
+        Console.WriteLine($"{adj[0].num}*{adj[1].num}={ratio}");
+        allgears += ratio;
     }
 }
 
-Console.WriteLine(total);
+Console.WriteLine("part 2: " + allgears);
 
 class Part
 {
     public int num;
     public int x1, x2, y;
+    public bool IsAdjacent(int px, int py)
+    {
+        return px >= x1 - 1 && px <= x2 + 1 &&
+            py >= y - 1 && py <= y + 1;
+    }
 }
