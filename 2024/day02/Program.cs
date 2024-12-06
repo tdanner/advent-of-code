@@ -1,4 +1,4 @@
-﻿bool IsSafe(List<int> levels)
+bool IsSafe(List<int> levels)
 {
     var diffs = new List<int>();
     for (int i = 1; i < levels.Count; i++)
