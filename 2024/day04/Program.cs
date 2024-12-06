@@ -45,3 +45,29 @@ for (int y = 0; y < lines.Length; y++)
 }
 
 Console.WriteLine($"Part 1: {found}");
+
+static bool mas(char a, char b)
+{
+    return a == 'M' && b == 'S' || a == 'S' && b == 'M';
+}
+
+found = 0;
+for (int y = 0; y < lines.Length; y++)
+{
+    for (int x = 0; x < lines[0].Length; x++)
+    {
+        if (get(x, y) == 'A')
+        {
+            char nw = get(x - 1, y - 1),
+                ne = get(x + 1, y - 1),
+                se = get(x + 1, y + 1),
+                sw = get(x - 1, y + 1);
+            if (mas(nw, se) && mas(ne, sw))
+            {
+                found++;
+            }
+        }
+    }
+}
+
+Console.WriteLine($"Part 2: {found}");
