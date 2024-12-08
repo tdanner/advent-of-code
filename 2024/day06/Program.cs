@@ -1,4 +1,4 @@
-﻿var lines = File.ReadAllLines("input.txt");
+var lines = File.ReadAllLines("input.txt");
 int width = lines[0].Length;
 int height = lines.Length;
 
