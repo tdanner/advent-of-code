@@ -42,12 +42,12 @@ struct Day08: Day {
                 for secondAntenna in channelAntennae.dropFirst(index + 1) {
                     let vector = reduce(secondAntenna - firstAntenna)
                     var n = 0
-                    while (inBounds(firstAntenna - vector*n)) {
+                    while inBounds(firstAntenna - vector*n) {
                         antinodes.insert(firstAntenna - vector*n)
                         n += 1
                     }
                     n = 0
-                    while (inBounds(firstAntenna + vector*n)) {
+                    while inBounds(firstAntenna + vector*n) {
                         antinodes.insert(firstAntenna + vector*n)
                         n += 1
                     }

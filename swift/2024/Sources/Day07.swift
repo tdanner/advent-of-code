@@ -48,7 +48,7 @@ struct Day07: Day {
 
     func mag(_ n: Int) -> Int {
         var m = 10
-        while (n >= m) {
+        while n >= m {
             m *= 10
         }
         return m
