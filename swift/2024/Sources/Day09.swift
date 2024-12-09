@@ -118,7 +118,10 @@ struct Day09: Day {
     func partTwo() -> Int {
         let disk = Disk2(input)
         for file in disk.files {
-            while disk.freeSpans.last?.length == 0 {
+            while !disk.freeSpans.isEmpty
+                && (disk.freeSpans.last!.position >= file.position
+                    || disk.freeSpans.last!.length == 0)
+            {
                 disk.freeSpans.removeLast()
             }
             let target = disk.freeSpans.last(where: {
