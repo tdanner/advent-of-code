@@ -21,6 +21,7 @@ struct Point: Hashable {
     static let zero = Point(0, 0)
 
     static let directions = [north, northEast, east, southEast, south, southWest, west, northWest]
+    static let cardinalDirections = [north, east, south, west]
 }
 
 struct PointPair: Hashable {
