@@ -3,13 +3,9 @@ import Foundation
 struct Day11: Day {
     let initialStones: [Int]
 
-    struct Stone: Hashable, CustomDebugStringConvertible {
+    struct Stone: Hashable {
         let initial: Int
         let blinks: Int
-
-        var debugDescription: String {
-            return "\(initial)@\(blinks)"
-        }
     }
 
     var cache: [Stone: Int] = [:]  // (stone, blinks) -> count
@@ -28,25 +24,23 @@ struct Day11: Day {
 
     func solve(_ blinks: Int) -> Int {
         var cache: [Stone: Int] = [:]
-        return initialStones.map({ stonesAfterBlinks(&cache, $0, blinks) })
-            .reduce(0, +)
-    }
 
-    func stonesAfterBlinks(
-        _ cache: inout [Stone: Int], _ stone: Int, _ blinks: Int
-    ) -> Int {
-        let key = Stone(initial: stone, blinks: blinks)
-        if let count = cache[key] {
+        func stonesAfterBlinks(_ stone: Int, _ blinks: Int) -> Int {
+            let key = Stone(initial: stone, blinks: blinks)
+            if let count = cache[key] {
+                return count
+            }
+            let stones = blink(stone)
+            let count =
+                blinks > 1
+                ? stones.map({ stonesAfterBlinks($0, blinks - 1) }).reduce(0, +)
+                : stones.count
+            cache[key] = count
             return count
         }
-        let stones = blink(stone)
-        let count =
-            blinks > 1
-            ? stones.map({ stonesAfterBlinks(&cache, $0, blinks - 1) })
-                .reduce(0, +)
-            : stones.count
-        cache[key] = count
-        return count
+
+        return initialStones.map({ stonesAfterBlinks($0, blinks) })
+            .reduce(0, +)
     }
 
     func blink(_ stone: Int) -> [Int] {
