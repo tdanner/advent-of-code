@@ -22,6 +22,10 @@ struct Point: Hashable {
 
     static let directions = [north, northEast, east, southEast, south, southWest, west, northWest]
     static let cardinalDirections = [north, east, south, west]
+    
+    func neighbors() -> [Point] {
+        Point.cardinalDirections.map({ self + $0 })
+    }
 }
 
 struct PointPair: Hashable {
