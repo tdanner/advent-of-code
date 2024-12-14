@@ -44,6 +44,11 @@ struct Day13: Day {
     }
 
     func partTwo() -> Int {
-        return 0
+        let offsetSize = 10000000000000
+        let offset = Point(offsetSize, offsetSize)
+        let games2 = games.map { game in
+            Game(a: game.a, b: game.b, prize: game.prize + offset)
+        }
+        return games2.map({ $0.tokens() }).reduce(0, +)
     }
 }
