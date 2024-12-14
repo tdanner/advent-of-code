@@ -7,7 +7,7 @@ struct Day12: Day {
         let plant: Character
         var points: Set<Point> = []
 
-        init(plant: Character) {
+        required init(plant: Character) {
             self.plant = plant
         }
 
@@ -24,14 +24,78 @@ struct Day12: Day {
         }
     }
 
+    class Region2: Region {
+        func boundingBox() -> (topLeft: Point, bottomRight: Point) {
+            var top = Int.max
+            var bottom = 0
+            var left = Int.max
+            var right = 0
+            for p in points {
+                top = min(top, p.y)
+                bottom = max(bottom, p.y)
+                left = min(left, p.x)
+                right = max(right, p.x)
+            }
+            return (Point(left, top), Point(right, bottom))
+        }
+
+        override var perimeter: Int {
+            var count = 0
+            let (topLeft, bottomRight) = boundingBox()
+            for y in topLeft.y...bottomRight.y {
+                for direction in [Point.north, Point.south] {
+                    var inFence = false
+                    for x in topLeft.x...(bottomRight.x + 1) {
+                        // we are in a fence as long as the current point is in the region and the north point is not
+                        let p = Point(x, y)
+                        let exterior = p + direction
+                        let fenceHere =
+                            points.contains(p) && !points.contains(exterior)
+                        if inFence && !fenceHere {
+                            count += 1
+                        }
+                        inFence = fenceHere
+                    }
+                }
+            }
+
+            for x in topLeft.x...bottomRight.x {
+                for direction in [Point.west, Point.east] {
+                    var inFence = false
+                    for y in topLeft.y...(bottomRight.y + 1) {
+                        // we are in a fence as long as the current point is in the region and the north point is not
+                        let p = Point(x, y)
+                        let exterior = p + direction
+                        let fenceHere =
+                            points.contains(p) && !points.contains(exterior)
+                        if inFence && !fenceHere {
+                            count += 1
+                        }
+                        inFence = fenceHere
+                    }
+                }
+            }
+
+            return count
+        }
+    }
+
     init(input: String) {
         grid = Grid<Character>(input)
     }
 
     func partOne() -> Int {
-        var regionMap: [Point: Region] = [:]
+        calculate(dummy: Region(plant: "#"))
+    }
 
-        func flood(_ region: Region, _ p: Point) {
+    func partTwo() -> Int {
+        calculate(dummy: Region2(plant: "#"))
+    }
+
+    func calculate<TRegion: Region>(dummy: TRegion) -> Int {
+        var regionMap: [Point: TRegion] = [:]
+
+        func flood(_ region: TRegion, _ p: Point) {
             region.points.insert(p)
             regionMap[p] = region
             for next in p.neighbors() {
@@ -41,25 +105,19 @@ struct Day12: Day {
             }
         }
 
-        var regions: [Region] = []
+        var regions: [TRegion] = []
         grid.forEach { p, c in
             if regionMap[p] == nil {
-                let region = Region(plant: c)
+                let region = TRegion(plant: c)
                 regions.append(region)
                 flood(region, p)
             }
         }
 
 //        regions.sorted(using: KeyPathComparator(\.plant)).forEach {
-//            print(
-//                "\($0.plant): area: \($0.area), perimeter: \($0.perimeter), cost: \($0.cost)"
-//            )
+//            print("\($0.plant): \($0.area) * \($0.perimeter) = \($0.cost)")
 //        }
 
         return regions.map(\.cost).reduce(0, +)
-    }
-
-    func partTwo() -> Int {
-        return 0
     }
 }
