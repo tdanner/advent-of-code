@@ -1,6 +1,6 @@
 import Foundation
 
-typealias CurrentDay = Day14
+typealias CurrentDay = Day15
 
 let startTime = Date.now
 
