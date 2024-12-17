@@ -97,7 +97,6 @@ struct Day15: Day {
 
         func move(_ start: Point, _ direction: Point) {
             if !canMove(start, direction) { return }
-            let contents = grid[start]
             let dest = start + direction
             let destContents = grid[dest]
             switch destContents {
