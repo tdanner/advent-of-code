@@ -66,7 +66,32 @@ struct Day16: Day {
         }
     }
 
-    func partOne() -> Int {
+    func findPath(_ end: State, _ cameFrom: [State: State]) -> [State] {
+        var path: [State] = [end]
+        var current = end
+        while let prev = cameFrom[current] {
+            path.append(prev)
+            current = prev
+        }
+        path.reverse()
+        return path
+    }
+    
+    func findAllPaths(_ end: State, _ cameFrom: [State: [State]]) -> Set<Point> {
+        var points = Set<Point>()
+        
+        func backtrack(_ current: State) {
+            for prev in cameFrom[current] ?? [] {
+                backtrack(prev)
+            }
+            points.insert(current.loc)
+        }
+        
+        backtrack(end)
+        return points
+    }
+    
+    func solveMaze() -> (cost: Int, numTiles: Int) {
         var startLoc = Point.zero
         var end = Point.zero
         grid.forEach {
@@ -77,26 +102,42 @@ struct Day16: Day {
         var openSet = Heap<StateWithFScore>([
             StateWithFScore(state: start, fScore: hScore(start, end))
         ])
-        var cameFrom: [State: State] = [:]
+        var cameFrom: [State: [State]] = [:]
         var gScore: [State: Int] = [start: 0]
-
+        var minCost = Int.max
+        var endState: State = State(loc: end, facing: .north)
         while !openSet.isEmpty {
             let current = openSet.removeMin()
             if current.state.loc == end {
-                return current.fScore
+                endState = current.state
+                if current.fScore < minCost { minCost = current.fScore }
+                continue
             }
             for (opt, cost) in current.state.options(grid) {
                 let g = gScore[current.state]! + cost
                 if g < gScore[opt] ?? Int.max {
-                    cameFrom[opt] = current.state
+                    cameFrom[opt, default: []].append(current.state)
                     gScore[opt] = g
                     let f = g + hScore(opt, end)
+                    if f > minCost { continue }
                     let neighbor = StateWithFScore(state: opt, fScore: f)
                     openSet.insert(neighbor)
                 }
             }
         }
-        return 0
+        let visited = findAllPaths(endState, cameFrom)
+        for y in 0..<grid.height {
+            for x in 0..<grid.width {
+                if visited.contains(Point(x, y)) {
+                    print("O", terminator: "")
+                } else {
+                    print(grid[Point(x, y)], terminator: "")
+                }
+            }
+            print()
+        }
+        
+        return (minCost, findAllPaths(endState, cameFrom).count)
     }
 
     func hScore(_ start: State, _ end: Point) -> Int {
@@ -134,10 +175,15 @@ struct Day16: Day {
         } else {
             fatalError()
         }
-        return dist + turns * 1000
+//        return dist + turns * 1000
+        return 0
+    }
+
+    func partOne() -> Int {
+        return solveMaze().cost
     }
 
     func partTwo() -> Int {
-        return 0
+        return solveMaze().numTiles
     }
 }
