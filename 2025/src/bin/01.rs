@@ -1,24 +1,17 @@
 advent_of_code::solution!(1);
 
-struct Rotation {
-    direction: i32,
-    distance: i32,
-}
+const DIAL_SIZE: i32 = 100;
 
-fn parse(input: &str) -> Vec<Rotation> {
+fn parse(input: &str) -> Vec<i32> {
     input
-        .split('\n')
+        .lines()
         .map(|l| {
-            let mut iter = l.chars();
-            let first = iter.next();
-            let rest: String = iter.collect();
-            Rotation {
-                direction: match first {
-                    Some('L') => -1,
-                    Some('R') => 1,
-                    _ => panic!(),
-                },
-                distance: rest.parse().expect("not an integer"),
+            let (dir, digits) = l.split_at(1);
+            let dist: i32 = digits.parse().expect("not an integer");
+            dist * match dir {
+                "L" => -1,
+                "R" => 1,
+                _ => panic!(),
             }
         })
         .collect()
@@ -27,10 +20,9 @@ fn parse(input: &str) -> Vec<Rotation> {
 pub fn part_one(input: &str) -> Option<u64> {
     let rotations = parse(input);
     let mut position: i32 = 50;
-    const DIAL_SIZE: i32 = 100;
     let mut zero_stops: u64 = 0;
     for rot in rotations {
-        position += rot.direction * rot.distance;
+        position += rot;
         while position < 0 {
             position += DIAL_SIZE;
         }
@@ -46,11 +38,10 @@ pub fn part_one(input: &str) -> Option<u64> {
 pub fn part_two(input: &str) -> Option<u64> {
     let rotations = parse(input);
     let mut position: i32 = 50;
-    const DIAL_SIZE: i32 = 100;
     let mut zero_visits: u64 = 0;
     for rot in rotations {
-        for _ in 0..rot.distance {
-            position += rot.direction;
+        for _ in 0..rot.abs() {
+            position += rot.signum();
             if position < 0 {
                 position += DIAL_SIZE;
             }
