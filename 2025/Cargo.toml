@@ -27,3 +27,4 @@ pico-args = "0.5.0"
 tinyjson = "2.5.1"
 
 # Solution dependencies
+rayon = "1.11"

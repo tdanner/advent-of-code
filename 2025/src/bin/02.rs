@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+
 advent_of_code::solution!(2);
 
 fn parse(input: &str) -> impl Iterator<Item = (u64, u64)> + '_ {
@@ -9,27 +11,72 @@ fn parse(input: &str) -> impl Iterator<Item = (u64, u64)> + '_ {
     })
 }
 
-fn repeats(bytes: &[u8], len: usize) -> bool {
-    let head = &bytes[..len];
-    bytes.chunks(len).all(|chunk| chunk == head)
+fn digit_len(mut n: u64) -> u32 {
+    if n == 0 {
+        return 1;
+    }
+    let mut digits = 0;
+    while n > 0 {
+        digits += 1;
+        n /= 10;
+    }
+    digits
+}
+
+fn take_block(n: &mut u64, block_len: u32) -> u64 {
+    let mut block = 0u64;
+    let mut place = 1u64;
+
+    for _ in 0..block_len {
+        let digit = *n % 10;
+        *n /= 10;
+        block += digit * place;
+        place *= 10;
+    }
+
+    block as u64
+}
+
+fn repeats(value: u64, block_len: u32) -> bool {
+    if block_len == 0 {
+        return false;
+    }
+
+    let digits = digit_len(value);
+    if digits % block_len != 0 {
+        return false;
+    }
+
+    let mut n = value;
+    let pattern = take_block(&mut n, block_len);
+    while n > 0 {
+        if take_block(&mut n, block_len) != pattern {
+            return false;
+        }
+    }
+    true
 }
 
 fn repeats_twice(id: &u64) -> bool {
-    let bytes = id.to_string().into_bytes();
-    let len = bytes.len();
-    len % 2 == 0 && repeats(&bytes, bytes.len() / 2)
+    let len = digit_len(*id);
+    len % 2 == 0 && repeats(*id, len / 2)
 }
 
 fn has_repeat(id: &u64) -> bool {
-    let bytes = id.to_string().into_bytes();
-    (1..=bytes.len() / 2).any(|len| repeats(&bytes, len))
+    (1..=digit_len(*id) / 2).any(|len| repeats(*id, len))
 }
 
 fn sum_invalids<F>(input: &str, test: F) -> u64
 where
-    F: FnMut(&u64) -> bool,
+    F: Fn(&u64) -> bool + Send + Sync,
 {
-    parse(input).flat_map(|(s, e)| s..=e).filter(test).sum()
+    parse(input)
+        .flat_map(|(s, e)| s..=e)
+        .collect::<Vec<_>>()
+        .par_iter()
+        .cloned()
+        .filter(test)
+        .sum()
 }
 
 pub fn part_one(input: &str) -> Option<u64> {
