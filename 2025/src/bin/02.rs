@@ -1,62 +1,43 @@
 advent_of_code::solution!(2);
 
-fn parse(input: &str) -> Vec<(u64, u64)> {
-    input
-        .split(',')
-        .map(|r| {
-            let (start_str, end_str) = r.split_once('-').unwrap();
-            let start: u64 = start_str.parse().expect("not an int");
-            let end: u64 = end_str.parse().expect("not an int");
-            (start, end)
-        })
-        .collect()
+fn parse(input: &str) -> impl Iterator<Item = (u64, u64)> + '_ {
+    input.split(',').map(|r| {
+        let (start_str, end_str) = r.split_once('-').unwrap();
+        let start: u64 = start_str.parse().expect("not an int");
+        let end: u64 = end_str.parse().expect("not an int");
+        (start, end)
+    })
 }
 
-fn repeats(s: &str, len: usize) -> bool {
-    if s.len() % len != 0 {
-        return false;
-    }
-    let b = s.as_bytes();
-    for i in 0..len {
-        let c = b[i];
-        for r in 1..b.len() / len {
-            if b[r * len + i] != c {
-                return false;
-            }
-        }
-    }
-    true
+fn repeats(bytes: &[u8], len: usize) -> bool {
+    let head = &bytes[..len];
+    bytes.chunks(len).all(|chunk| chunk == head)
+}
+
+fn repeats_twice(id: &u64) -> bool {
+    let bytes = id.to_string().into_bytes();
+    let len = bytes.len();
+    len % 2 == 0 && repeats(&bytes, bytes.len() / 2)
+}
+
+fn has_repeat(id: &u64) -> bool {
+    let bytes = id.to_string().into_bytes();
+    (1..=bytes.len() / 2).any(|len| repeats(&bytes, len))
+}
+
+fn sum_invalids<F>(input: &str, test: F) -> u64
+where
+    F: FnMut(&u64) -> bool,
+{
+    parse(input).flat_map(|(s, e)| s..=e).filter(test).sum()
 }
 
 pub fn part_one(input: &str) -> Option<u64> {
-    let ranges = parse(input);
-    let mut total: u64 = 0;
-    for (start, end) in ranges {
-        for id in start..=end {
-            let id_str = format!("{id}");
-            if id_str.len() % 2 == 0 && repeats(&id_str, id_str.len() / 2) {
-                total += id;
-            }
-        }
-    }
-    Some(total)
+    Some(sum_invalids(input, repeats_twice))
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    let ranges = parse(input);
-    let mut total: u64 = 0;
-    for (start, end) in ranges {
-        for id in start..=end {
-            let id_str = format!("{id}");
-            for len in 1..=id_str.len() / 2 {
-                if repeats(&id_str, len) {
-                    total += id;
-                    break;
-                }
-            }
-        }
-    }
-    Some(total)
+    Some(sum_invalids(input, has_repeat))
 }
 
 #[cfg(test)]
