@@ -13,15 +13,20 @@ fn max_index(bank: &[u8]) -> usize {
 }
 
 fn max_num(bank: &[u8], digits: u32) -> u64 {
-    if digits == 1 {
-        let max = bank.iter().max().unwrap();
-        return (*max).into();
+    let mut start = 0;
+    let mut remaining = digits as usize;
+    let mut joltage = 0u64;
+
+    while remaining > 0 {
+        let upper = bank.len() - remaining + 1;
+        let battery_index = max_index(&bank[start..upper]);
+
+        joltage = joltage * 10 + bank[start + battery_index] as u64;
+        start += battery_index + 1;
+        remaining -= 1;
     }
-    let upper = bank.len() - (digits - 1) as usize;
-    let first_index = max_index(&bank[..upper]);
-    let first = bank[first_index];
-    let rest = max_num(&bank[first_index + 1..], digits - 1);
-    10u64.pow(digits - 1) * u64::from(first) + rest
+
+    joltage
 }
 
 fn total_joltage(input: &str, battery_count: u32) -> Option<u64> {
