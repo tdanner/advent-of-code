@@ -7,26 +7,43 @@ fn parse(input: &str) -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn largest(bank: Vec<u8>) -> u64 {
-    let mut index_of_first_digit: usize = 0;
-    for i in 0..bank.len() - 1 {
-        if bank[i] > bank[index_of_first_digit] {
-            index_of_first_digit = i;
+fn max_index(bank: &[u8]) -> usize {
+    let mut max_idx: usize = 0;
+    for i in 0..bank.len() {
+        if bank[i] > bank[max_idx] {
+            max_idx = i;
         }
     }
-    let second_digit = bank[index_of_first_digit + 1..].iter().max().unwrap();
-    let joltage = bank[index_of_first_digit] * 10 + second_digit;
-    // println!("{bank:?} -> {joltage}");
-    joltage.into()
+    max_idx
+}
+
+fn max_num(bank: &[u8], digits: u32) -> u64 {
+    if digits == 1 {
+        let max = bank.iter().max().unwrap();
+        return (*max).into();
+    }
+    let upper = bank.len() - (digits - 1) as usize;
+    let first_index = max_index(&bank[..upper]);
+    let first = bank[first_index];
+    let rest = max_num(&bank[first_index + 1..], digits - 1);
+    10u64.pow(digits - 1) * u64::from(first) + rest
+}
+
+fn total_joltage(input: &str, battery_count: u32) -> Option<u64> {
+    Some(
+        parse(input)
+            .iter()
+            .map(|bank| max_num(bank, battery_count))
+            .sum(),
+    )
 }
 
 pub fn part_one(input: &str) -> Option<u64> {
-    let banks = parse(input);
-    Some(banks.into_iter().map(largest).sum())
+    total_joltage(input, 2)
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    None
+    total_joltage(input, 12)
 }
 
 #[cfg(test)]
@@ -42,6 +59,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(3121910778619));
     }
 }
