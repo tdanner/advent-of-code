@@ -8,13 +8,8 @@ fn parse(input: &str) -> Vec<Vec<u8>> {
 }
 
 fn max_index(bank: &[u8]) -> usize {
-    let mut max_idx: usize = 0;
-    for i in 0..bank.len() {
-        if bank[i] > bank[max_idx] {
-            max_idx = i;
-        }
-    }
-    max_idx
+    let max = bank.iter().max().unwrap();
+    bank.iter().position(|i| i == max).unwrap()
 }
 
 fn max_num(bank: &[u8], digits: u32) -> u64 {
