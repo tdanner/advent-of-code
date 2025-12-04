@@ -1,12 +1,12 @@
 advent_of_code::solution!(4);
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Contents {
     Empty,
     Paper,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Point {
     x: i32,
     y: i32,
@@ -17,55 +17,58 @@ struct Map {
 }
 
 impl Map {
-    pub fn at(&self, p: &Point) -> Contents {
-        if p.y >= 0 && p.y < self.tiles.len() as i32 {
-            let row = &self.tiles[p.y as usize];
-            if p.x >= 0 && p.x < row.len() as i32 {
-                row[p.x as usize]
-            } else {
-                Contents::Empty
-            }
-        } else {
-            Contents::Empty
-        }
+    pub fn at(&self, p: Point) -> Contents {
+        self.tiles
+            .get(p.y as usize)
+            .and_then(|row| row.get(p.x as usize))
+            .copied()
+            .unwrap_or(Contents::Empty)
     }
 
-    pub fn y_range(&self) -> std::ops::Range<usize> {
-        0..self.tiles.len()
+    pub fn points(&self) -> impl Iterator<Item = Point> + '_ {
+        let h = self.tiles.len();
+        let w = self.tiles[0].len();
+        (0..h).flat_map(move |y| {
+            (0..w).map(move |x| Point {
+                x: x as i32,
+                y: y as i32,
+            })
+        })
     }
 
-    pub fn x_range(&self) -> std::ops::Range<usize> {
-        0..self.tiles[0].len()
+    pub fn is_accessible(&self, p: Point) -> bool {
+        neighbors_of(p)
+            .filter(|&p| self.at(p) == Contents::Paper)
+            .count()
+            < 4
     }
 
-    pub fn set(&mut self, p: &Point, to: &Contents) {
-        self.tiles[p.y as usize][p.x as usize] = *to;
+    pub fn accessible_papers(&self) -> impl Iterator<Item = Point> + '_ {
+        self.points()
+            .filter(|&p| self.at(p) == Contents::Paper && self.is_accessible(p))
+    }
+
+    pub fn set(&mut self, p: Point, to: Contents) {
+        self.tiles[p.y as usize][p.x as usize] = to;
     }
 }
 
-fn neighbors_of(p: &Point) -> Vec<Point> {
-    vec![
-        Point {
-            x: p.x - 1,
-            y: p.y - 1,
-        },
-        Point { x: p.x, y: p.y - 1 },
-        Point {
-            x: p.x + 1,
-            y: p.y - 1,
-        },
-        Point { x: p.x - 1, y: p.y },
-        Point { x: p.x + 1, y: p.y },
-        Point {
-            x: p.x - 1,
-            y: p.y + 1,
-        },
-        Point { x: p.x, y: p.y + 1 },
-        Point {
-            x: p.x + 1,
-            y: p.y + 1,
-        },
-    ]
+fn neighbors_of(p: Point) -> impl Iterator<Item = Point> {
+    const OFFSETS: [(i32, i32); 8] = [
+        (-1, -1),
+        (0, -1),
+        (1, -1),
+        (-1, 0),
+        (1, 0),
+        (-1, 1),
+        (0, 1),
+        (1, 1),
+    ];
+
+    OFFSETS.into_iter().map(move |(dx, dy)| Point {
+        x: p.x + dx,
+        y: p.y + dy,
+    })
 }
 
 fn parse(input: &str) -> Map {
@@ -77,7 +80,7 @@ fn parse(input: &str) -> Map {
                     .map(|c| match c {
                         '.' => Contents::Empty,
                         '@' => Contents::Paper,
-                        _ => panic!(),
+                        other => panic!("unexpected char in map: {other}"),
                     })
                     .collect()
             })
@@ -87,60 +90,25 @@ fn parse(input: &str) -> Map {
 
 pub fn part_one(input: &str) -> Option<u64> {
     let map = parse(input);
-    let mut accessible = 0u64;
-    for y in map.y_range() {
-        for x in map.x_range() {
-            let p = Point {
-                x: x as i32,
-                y: y as i32,
-            };
-            if map.at(&p) == Contents::Paper {
-                let paper_count = neighbors_of(&p)
-                    .iter()
-                    .filter(|p| map.at(*p) == Contents::Paper)
-                    .count();
-                if paper_count < 4 {
-                    accessible += 1;
-                }
-            }
-        }
-    }
-    Some(accessible)
+    Some(map.accessible_papers().count() as u64)
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
     let mut map = parse(input);
-    let mut removed = 0u64;
+    let mut removed = 0usize;
     loop {
-        let mut this_round = 0u64;
-
-        for y in map.y_range() {
-            for x in map.x_range() {
-                let p = Point {
-                    x: x as i32,
-                    y: y as i32,
-                };
-                if map.at(&p) == Contents::Paper {
-                    let paper_count = neighbors_of(&p)
-                        .iter()
-                        .filter(|p| map.at(*p) == Contents::Paper)
-                        .count();
-                    if paper_count < 4 {
-                        this_round += 1;
-                        map.set(&p, &Contents::Empty);
-                    }
-                }
-            }
+        let to_remove: Vec<Point> = map.accessible_papers().collect();
+        if to_remove.is_empty() {
+            break;
         }
 
-        if this_round > 0 {
-            removed += this_round;
-        } else {
-            break;
+        removed += to_remove.len();
+        for p in to_remove {
+            map.set(p, Contents::Empty);
         }
     }
 
-    Some(removed)
+    Some(removed as u64)
 }
 
 #[cfg(test)]

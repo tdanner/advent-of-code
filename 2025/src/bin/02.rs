@@ -34,7 +34,7 @@ fn take_block(n: &mut u64, block_len: u32) -> u64 {
         place *= 10;
     }
 
-    block as u64
+    block
 }
 
 fn repeats(value: u64, block_len: u32) -> bool {
@@ -43,7 +43,7 @@ fn repeats(value: u64, block_len: u32) -> bool {
     }
 
     let digits = digit_len(value);
-    if digits % block_len != 0 {
+    if !digits.is_multiple_of(block_len) {
         return false;
     }
 
@@ -59,7 +59,7 @@ fn repeats(value: u64, block_len: u32) -> bool {
 
 fn repeats_twice(id: &u64) -> bool {
     let len = digit_len(*id);
-    len % 2 == 0 && repeats(*id, len / 2)
+    len.is_multiple_of(2) && repeats(*id, len / 2)
 }
 
 fn has_repeat(id: &u64) -> bool {
