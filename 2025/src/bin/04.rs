@@ -37,6 +37,10 @@ impl Map {
     pub fn x_range(&self) -> std::ops::Range<usize> {
         0..self.tiles[0].len()
     }
+
+    pub fn set(&mut self, p: &Point, to: &Contents) {
+        self.tiles[p.y as usize][p.x as usize] = *to;
+    }
 }
 
 fn neighbors_of(p: &Point) -> Vec<Point> {
@@ -105,7 +109,38 @@ pub fn part_one(input: &str) -> Option<u64> {
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    None
+    let mut map = parse(input);
+    let mut removed = 0u64;
+    loop {
+        let mut this_round = 0u64;
+
+        for y in map.y_range() {
+            for x in map.x_range() {
+                let p = Point {
+                    x: x as i32,
+                    y: y as i32,
+                };
+                if map.at(&p) == Contents::Paper {
+                    let paper_count = neighbors_of(&p)
+                        .iter()
+                        .filter(|p| map.at(*p) == Contents::Paper)
+                        .count();
+                    if paper_count < 4 {
+                        this_round += 1;
+                        map.set(&p, &Contents::Empty);
+                    }
+                }
+            }
+        }
+
+        if this_round > 0 {
+            removed += this_round;
+        } else {
+            break;
+        }
+    }
+
+    Some(removed)
 }
 
 #[cfg(test)]
@@ -121,6 +156,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(43));
     }
 }
