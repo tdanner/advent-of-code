@@ -8,12 +8,12 @@ struct IngredientDB {
 }
 
 fn parse(input: &str) -> IngredientDB {
-    let mut fresh_list: Vec<RangeInclusive<u64>> = vec![];
-    let mut available: Vec<u64> = vec![];
+    let mut fresh_list = Vec::new();
+    let mut available = Vec::new();
     for line in input.lines() {
         if let Some((a, b)) = line.split_once('-') {
-            let start: u64 = a.parse().expect("not an int");
-            let end: u64 = b.parse().expect("not an int");
+            let start: u64 = a.parse().unwrap();
+            let end: u64 = b.parse().unwrap();
             fresh_list.push(start..=end);
         } else if let Ok(ingredient) = line.parse() {
             available.push(ingredient);
@@ -27,12 +27,11 @@ fn parse(input: &str) -> IngredientDB {
 
 pub fn part_one(input: &str) -> Option<u64> {
     let db = parse(input);
-    let mut fresh_count = 0u64;
-    for ingredient in db.available {
-        if db.fresh_list.iter().any(|l| l.contains(&ingredient)) {
-            fresh_count += 1;
-        }
-    }
+    let fresh_count = db
+        .available
+        .into_iter()
+        .filter(|&ingredient| db.fresh_list.iter().any(|r| r.contains(&ingredient)))
+        .count() as u64;
     Some(fresh_count)
 }
 
@@ -50,17 +49,25 @@ struct RangeBound {
 
 pub fn part_two(input: &str) -> Option<u64> {
     let db = parse(input);
-    let mut bounds: Vec<RangeBound> = vec![];
-    for range in db.fresh_list {
-        bounds.push(RangeBound {
-            kind: RangeBoundKind::Start,
-            id: *range.start(),
-        });
-        bounds.push(RangeBound {
-            kind: RangeBoundKind::End,
-            id: *range.end(),
-        });
-    }
+    let mut bounds: Vec<RangeBound> = db
+        .fresh_list
+        .into_iter()
+        .flat_map(|range| {
+            let start = *range.start();
+            let end = *range.end();
+            [
+                RangeBound {
+                    id: start,
+                    kind: RangeBoundKind::Start,
+                },
+                RangeBound {
+                    id: end,
+                    kind: RangeBoundKind::End,
+                },
+            ]
+        })
+        .collect();
+
     bounds.sort_by_key(|e| {
         (
             e.id,
@@ -70,34 +77,30 @@ pub fn part_two(input: &str) -> Option<u64> {
             },
         )
     });
-    let mut bounds_iter = bounds.iter();
-    let first_bound = bounds_iter.next().unwrap();
-    assert!(first_bound.kind == RangeBoundKind::Start);
-    let mut fresh_count = 0u64;
-    let mut current_start = Some(first_bound.id);
-    let mut active_ranges = 1i64;
-    for bound in bounds_iter {
-        println!("Active ranges {active_ranges}. Considering {bound:?}.");
-        if bound.kind == RangeBoundKind::End {
-            active_ranges -= 1;
-            assert!(active_ranges >= 0);
-            if active_ranges == 0
-                && let Some(start) = current_start
-            {
-                let end = bound.id;
 
-                let new_fresh = end - start + 1;
-                println!("Closing range {start}..={end}. Adding {new_fresh}.");
-                fresh_count += new_fresh;
-                current_start = None;
+    let mut iter = bounds.into_iter();
+    let first_bound = iter.next()?;
+    assert!(matches!(first_bound.kind, RangeBoundKind::Start));
+
+    let mut fresh_count = 0u64;
+    let mut active_ranges = 1i64;
+    let mut current_start = first_bound.id;
+
+    for bound in iter {
+        match bound.kind {
+            RangeBoundKind::End => {
+                active_ranges -= 1;
+                assert!(active_ranges >= 0);
+                if active_ranges == 0 {
+                    fresh_count += bound.id - current_start + 1;
+                }
             }
-        } else if bound.kind == RangeBoundKind::Start {
-            if active_ranges == 0 {
-                let start = bound.id;
-                println!("Opening range at {start}.");
-                current_start = Some(start);
+            RangeBoundKind::Start => {
+                if active_ranges == 0 {
+                    current_start = bound.id;
+                }
+                active_ranges += 1;
             }
-            active_ranges += 1;
         }
     }
     Some(fresh_count)
