@@ -1,5 +1,6 @@
 advent_of_code::solution!(7);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tile {
     Empty,
     Splitter,
@@ -35,14 +36,12 @@ pub fn part_one(input: &str) -> Option<u64> {
         for (x, tile) in row.iter().enumerate() {
             match tile {
                 Tile::Empty => next[x] |= beams[x],
-                Tile::Splitter => {
-                    if beams[x] {
-                        splits += 1;
-                        next[x - 1] = true;
-                        next[x] = false;
-                        next[x + 1] = true;
-                    }
+                Tile::Splitter if beams[x] => {
+                    splits += 1;
+                    next[x - 1] = true;
+                    next[x + 1] = true;
                 }
+                Tile::Splitter => {}
             }
         }
         beams = next;
@@ -51,8 +50,23 @@ pub fn part_one(input: &str) -> Option<u64> {
     Some(splits)
 }
 
-pub fn part_two(_input: &str) -> Option<u64> {
-    None
+pub fn part_two(input: &str) -> Option<u64> {
+    let (tiles, start) = parse(input);
+    let width = tiles[0].len();
+    let mut futures = vec![1u64; width];
+
+    for row in tiles.iter().rev() {
+        let mut next = vec![0u64; width];
+        for (x, tile) in row.iter().enumerate() {
+            next[x] = match tile {
+                Tile::Empty => futures[x],
+                Tile::Splitter => futures[x - 1] + futures[x + 1],
+            };
+        }
+        futures = next;
+    }
+
+    Some(futures[start])
 }
 
 #[cfg(test)]
@@ -68,6 +82,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(40));
     }
 }
