@@ -55,6 +55,71 @@ fn parse(input: &str) -> Vec<Point3> {
         .collect()
 }
 
+fn connect_closest(
+    points: &Vec<Point3>,
+    circuits: &mut Vec<HashSet<Point3>>,
+    connections: &mut HashSet<(Point3, Point3)>,
+) -> (Point3, Point3) {
+    let mut closest_dist: f64 = f64::INFINITY;
+    let mut closest_pair: Option<(Point3, Point3)> = None;
+    for p1 in points.iter().copied() {
+        for p2 in points.iter().copied() {
+            if p1 == p2 {
+                continue;
+            }
+            if connections.contains(&(p1, p2)) {
+                continue;
+            }
+            let dist = p1.dist(&p2);
+            if dist < closest_dist {
+                closest_dist = dist;
+                closest_pair = Some((p1, p2));
+            }
+        }
+    }
+
+    let (p1, p2) = closest_pair.unwrap();
+    // println!("connecting {p1} to {p2}");
+    connections.insert((p1, p2));
+    connections.insert((p2, p1));
+
+    let circ1idx = circuits.iter().position(|circ| circ.contains(&p1));
+    let circ2idx = circuits.iter().position(|circ| circ.contains(&p2));
+    match (circ1idx, circ2idx) {
+        (None, None) => {
+            // println!("new circuit for {p1} and {p2}");
+            let mut circ: HashSet<Point3> = HashSet::new();
+            circ.insert(p1);
+            circ.insert(p2);
+            circuits.push(circ);
+        }
+        (Some(c1idx), None) => {
+            let c1 = &mut circuits[c1idx];
+            // println!("adding {p2} to circuit {c1:?}");
+            c1.insert(p2);
+        }
+        (None, Some(c2idx)) => {
+            let c2 = &mut circuits[c2idx];
+            // println!("adding {p1} to circuit {c2:?}");
+            c2.insert(p1);
+        }
+        (Some(c1idx), Some(c2idx)) if c1idx == c2idx => {} // already same circuit
+        (Some(c1idx), Some(c2idx)) => {
+            let (first, second) = if c1idx < c2idx {
+                (c1idx, c2idx)
+            } else {
+                (c2idx, c1idx)
+            };
+            let c2 = circuits.remove(second);
+            let c1 = &mut circuits[first];
+            // println!("merging {c1:?} and {c2:?}");
+            c1.extend(c2.iter());
+        }
+    }
+
+    (p1, p2)
+}
+
 pub fn part_one(input: &str) -> Option<u64> {
     let points = parse(input);
     let mut circuits: Vec<HashSet<Point3>> = Vec::new();
@@ -63,70 +128,15 @@ pub fn part_one(input: &str) -> Option<u64> {
     let iterations = if points.len() < 100 { 10 } else { 1000 };
 
     for _ in 0..iterations {
-        let mut closest_dist: f64 = f64::INFINITY;
-        let mut closest_pair: Option<(Point3, Point3)> = None;
-        for p1 in points.iter().copied() {
-            for p2 in points.iter().copied() {
-                if p1 == p2 {
-                    continue;
-                }
-                if connections.contains(&(p1, p2)) {
-                    continue;
-                }
-                let dist = p1.dist(&p2);
-                if dist < closest_dist {
-                    closest_dist = dist;
-                    closest_pair = Some((p1, p2));
-                }
-            }
-        }
-
-        let (p1, p2) = closest_pair.unwrap();
-        // println!("connecting {p1} to {p2}");
-        connections.insert((p1, p2));
-        connections.insert((p2, p1));
-
-        let circ1idx = circuits.iter().position(|circ| circ.contains(&p1));
-        let circ2idx = circuits.iter().position(|circ| circ.contains(&p2));
-        match (circ1idx, circ2idx) {
-            (None, None) => {
-                // println!("new circuit for {p1} and {p2}");
-                let mut circ: HashSet<Point3> = HashSet::new();
-                circ.insert(p1);
-                circ.insert(p2);
-                circuits.push(circ);
-            }
-            (Some(c1idx), None) => {
-                let c1 = &mut circuits[c1idx];
-                // println!("adding {p2} to circuit {c1:?}");
-                c1.insert(p2);
-            }
-            (None, Some(c2idx)) => {
-                let c2 = &mut circuits[c2idx];
-                // println!("adding {p1} to circuit {c2:?}");
-                c2.insert(p1);
-            }
-            (Some(c1idx), Some(c2idx)) if c1idx == c2idx => {} // already same circuit
-            (Some(c1idx), Some(c2idx)) => {
-                let (first, second) = if c1idx < c2idx {
-                    (c1idx, c2idx)
-                } else {
-                    (c2idx, c1idx)
-                };
-                let c2 = circuits.remove(second);
-                let c1 = &mut circuits[first];
-                // println!("merging {c1:?} and {c2:?}");
-                c1.extend(c2.iter());
-            }
-        }
+        connect_closest(&points, &mut circuits, &mut connections);
     }
 
     // for circuit in circuits.iter() {
     //     println!("{circuit:?}");
     // }
 
-    // let unconnected_points = points.len() - circuits.iter().map(|c| c.len()).sum::<usize>();
-    // println!("unconnected_points: {unconnected_points}");
+    let unconnected_points = points.len() - circuits.iter().map(|c| c.len()).sum::<usize>();
+    println!("unconnected_points: {unconnected_points}");
 
     circuits.sort_by_key(|circ| circ.len());
     circuits.reverse();
@@ -140,8 +150,23 @@ pub fn part_one(input: &str) -> Option<u64> {
     )
 }
 
-pub fn part_two(_input: &str) -> Option<u64> {
-    None
+pub fn part_two(input: &str) -> Option<u64> {
+    let points = parse(input);
+    let mut circuits: Vec<HashSet<Point3>> = Vec::new();
+    let mut connections: HashSet<(Point3, Point3)> = HashSet::new();
+    let mut num_circuits = points.len();
+
+    loop {
+        let (p1, p2) = connect_closest(&points, &mut circuits, &mut connections);
+        let unconnected_points = points.len() - circuits.iter().map(|c| c.len()).sum::<usize>();
+        if circuits.len() != num_circuits {
+            num_circuits = circuits.len();
+            println!("{num_circuits} circuits, {unconnected_points} unconnected points");
+        }
+        if circuits.len() == 1 && unconnected_points == 0 {
+            return Some(p1.x * p2.x);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -157,6 +182,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(25272));
     }
 }
