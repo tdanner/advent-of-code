@@ -171,8 +171,65 @@ pub fn part_one(input: &str) -> Option<u64> {
     // )
 }
 
-pub fn part_two(_input: &str) -> Option<u64> {
-    None
+fn joltage_buttons_needed(machine: &Machine) -> u64 {
+    // shortcut - we don't actually need to keep track of which button we pushed
+    let mut dist: HashMap<Vec<u16>, i8> = HashMap::new();
+    // let mut prev: HashMap<Vec<u16>, u16> = HashMap::new();
+    let mut todo = BinaryHeap::new();
+    let start = vec![0u16; machine.num_lights];
+    todo.push((0, start.clone()));
+    dist.insert(start, 0);
+
+    while let Some(here) = todo.pop() {
+        // println!(
+        //     "{} {}",
+        //     fmt_state(here.1, machine.num_lights),
+        //     dist[&here.1]
+        // );
+        if here.1 == machine.joltages {
+            return (here.0 as i8).unsigned_abs() as u64;
+        }
+        for button in &machine.buttons {
+            let mut next = here.1.clone();
+            for pos in 0..machine.num_lights {
+                let bit = 1 << pos;
+                if button & bit != 0 {
+                    next[pos] += 1;
+                }
+            }
+            if dist.contains_key(&next) {
+                continue;
+            }
+            if next
+                .iter()
+                .enumerate()
+                .any(|(pos, jolts)| *jolts > machine.joltages[pos])
+            {
+                continue;
+            }
+            let alt = here.0 - 1;
+            dist.insert(next.clone(), alt);
+            // prev.insert(next, here.1);
+            todo.push((alt, next));
+        }
+    }
+
+    100
+}
+
+pub fn part_two(input: &str) -> Option<u64> {
+    let machines = parse(input);
+    let mut total = 0;
+    for machine in &machines {
+        println!("{machine:?}");
+        let steps = joltage_buttons_needed(machine);
+        println!("{steps}");
+        total += steps;
+    }
+
+    Some(total)
+
+    //Some(machines.iter().map(joltage_buttons_needed).sum())
 }
 
 #[cfg(test)]
@@ -188,6 +245,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(33));
     }
 }
