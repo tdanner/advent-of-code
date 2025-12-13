@@ -2,7 +2,7 @@ use itertools::Itertools;
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{Debug, Formatter};
 use std::str::FromStr;
-use std::u16;
+use std::{u16, u64};
 
 advent_of_code::solution!(10);
 
@@ -142,7 +142,6 @@ fn num_buttons_needed(machine: &Machine) -> u64 {
 
     while let Some(here) = todo.pop() {
         if here.1 == machine.target {
-            // println!("{machine:?} -> {}", (here.0 as i8).unsigned_abs());
             return (here.0 as i8).unsigned_abs() as u64;
         }
         for button in &machine.buttons {
@@ -175,7 +174,7 @@ where
     T: Clone,
 {
     let mut sets = vec![];
-    for combo in 1..(1 << v.len()) as u16 {
+    for combo in 0..(1 << v.len()) as u16 {
         let mut set = vec![];
         for (pos, item) in v.iter().enumerate() {
             if (1 << pos) & combo != 0 {
@@ -187,54 +186,20 @@ where
     sets
 }
 
-fn joltage_parity(joltages: &Vec<u16>) -> u16 {
-    let mut parity: u16 = 0;
-    for (pos, joltage) in joltages.iter().enumerate() {
-        if !joltage.is_multiple_of(2) {
-            parity |= 1 << pos;
-        }
-    }
-    parity
-}
-
-fn lights_for_buttons(buttons: &Vec<u16>) -> u16 {
-    let mut lights = 0;
-    for button in buttons {
-        lights ^= button;
-    }
-    lights
-}
-
-fn buttons_needed_memo(memo: &mut HashMap<Vec<u16>, u64>, machine: &Machine) -> u64 {
+fn buttons_needed_memo(
+    indent: &str,
+    memo: &mut HashMap<Vec<u16>, u64>,
+    machine: &Machine,
+) -> Option<u64> {
     if machine.joltages.iter().all(|j| *j == 0) {
-        return 0;
+        return Some(0);
     }
     if let Some(&needed) = memo.get(&machine.joltages) {
-        return needed;
+        return Some(needed);
     }
-    let parity = joltage_parity(&machine.joltages);
 
-    // now we need to consider the powerset of buttons
-    let mut least_presses = u64::MAX;
-    // let mut winning_set = vec![];
-    // let all_button_sets = powerset(&machine.buttons);
-    // println!(
-    //     "there are {} subsets of {}",
-    //     all_button_sets.len(),
-    //     fmt_buttons(&machine.buttons, machine.num_lights),
-    // );
+    let mut least_presses = None;
     for button_set in powerset(&machine.buttons) {
-        let lights = lights_for_buttons(&button_set);
-        // skip if this button combo does not satisfy the even/odd pattern of the joltages
-        if lights != parity {
-            continue;
-        }
-        // println!(
-        //     "{} -> {} for {}",
-        //     fmt_buttons(&button_set, machine.num_lights),
-        //     fmt_state(lights, machine.num_lights),
-        //     fmt_joltages(&machine.joltages)
-        // );
         let mut reduced_joltages = machine.joltages.clone();
         let mut went_negative = false;
         for button in button_set.iter() {
@@ -248,68 +213,32 @@ fn buttons_needed_memo(memo: &mut HashMap<Vec<u16>, u64>, machine: &Machine) -> 
                 }
             }
         }
-        // can't push these buttons - joltage would go negative
-        if went_negative {
+        // not a viable button set
+        if went_negative || reduced_joltages.iter().any(|j| !j.is_multiple_of(2)) {
             continue;
         }
 
-        if reduced_joltages.iter().all(|&j| j == 0) {
-            let buttons_needed = button_set.len() as u64;
-            // println!(
-            //     "{machine:?} => {buttons_needed} via {}",
-            //     fmt_buttons(&button_set, machine.num_lights)
-            // );
-
-            if buttons_needed < least_presses {
-                least_presses = buttons_needed;
-                // winning_set = button_set;
-            }
-
-            continue;
-        }
-
-        let mut factor = 1;
-        while reduced_joltages
-            .iter()
-            .all(|j| j.is_multiple_of(factor * 2))
-        {
-            factor *= 2;
-        }
-
-        if factor > 8 {
-            println!("!!!! factor {factor}");
-        }
-
-        // println!("trying {}", fmt_buttons(&button_set, machine.num_lights));
+        reduced_joltages = reduced_joltages.iter().map(|j| j / 2).collect();
         let factored_machine = Machine {
             target: 0,
             num_lights: machine.num_lights,
             buttons: machine.buttons.clone(),
-            joltages: reduced_joltages.iter().map(|j| j / factor).collect(),
+            joltages: reduced_joltages,
         };
-        let partial_buttons_needed = buttons_needed_memo(memo, &factored_machine);
-        let buttons_needed = button_set.len() as u64 + (factor as u64 * partial_buttons_needed);
-
-        // println!(
-        //     "{machine:?} => {buttons_needed} via {}",
-        //     fmt_buttons(&button_set, machine.num_lights)
-        // );
-
-        if buttons_needed < least_presses {
-            least_presses = buttons_needed;
-            // winning_set = button_set;
+        let mut deeper = indent.to_string();
+        deeper.push_str("  ");
+        let partial_buttons_needed = buttons_needed_memo(&deeper, memo, &factored_machine);
+        if let Some(count) = partial_buttons_needed {
+            let buttons_needed = button_set.len() as u64 + 2 * count;
+            if least_presses.unwrap_or(u64::MAX) > buttons_needed {
+                least_presses = Some(buttons_needed);
+            }
         }
-        // least_presses = min(least_presses, buttons_needed);
     }
 
-    if least_presses == u64::MAX {
-        panic!("no solution for {machine:?}");
+    if let Some(least) = least_presses {
+        memo.insert(machine.joltages.clone(), least);
     }
-    // println!(
-    //     "{machine:?} => {least_presses} via {}",
-    //     fmt_buttons(&winning_set, machine.num_lights)
-    // );
-    memo.insert(machine.joltages.clone(), least_presses);
     least_presses
 }
 
@@ -317,16 +246,19 @@ pub fn part_two(input: &str) -> Option<u64> {
     let machines = parse(input);
     let mut total = 0;
     for machine in &machines {
-        println!("{machine:?}");
         let mut memo = HashMap::new();
-        let steps = buttons_needed_memo(&mut memo, machine);
-        println!("{steps}");
-        total += steps;
+        let steps = buttons_needed_memo("", &mut memo, machine);
+        if let Some(steps) = steps {
+            if machine.joltages.iter().any(|j| *j as u64 > steps) {
+                panic!("not enough steps!");
+            }
+            total += steps;
+        } else {
+            panic!("no solution for {machine:?}");
+        }
     }
 
     Some(total)
-
-    //Some(machines.iter().map(joltage_buttons_needed).sum())
 }
 
 #[cfg(test)]
